@@ -208,11 +208,14 @@ def load_colmap_data(realdir):
     # bottom = np.array([0,0,0,1.]).reshape([1,4])
     
     names = [imdata[k].name for k in imdata]
-    img_keys = [k for k in imdata]
+    print(names)
 
+    img_keys = [k for k in imdata]
+    print(img_keys)
     print( 'Images #', len(names))
     perm = np.argsort(names)
-
+    print(perm)
+    print(1/0)
     return imdata, perm, img_keys, hwf
 
 def skew(x):

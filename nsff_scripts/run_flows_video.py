@@ -87,8 +87,8 @@ def run_maskrcnn(model, img_path): #, intWidth=1024, intHeight=576):
 def motion_segmentation(basedir, threshold):
     import colmap_read_model as read_model
 
-    points3dfile = os.path.join(basedir, 'sparse/points3D.bin')
-    pts3d = read_model.read_points3d_binary(points3dfile)
+    # points3dfile = os.path.join(basedir, 'sparse/points3D.bin')
+    # pts3d = read_model.read_points3d_binary(points3dfile)
 
     img_dir = glob.glob(basedir + '/images_*x*')[0]  
     img0 = os.path.join(glob.glob(img_dir)[0], '%05d.png'%0)
@@ -97,6 +97,8 @@ def motion_segmentation(basedir, threshold):
     resized_height, resized_width = shape_0[0], shape_0[1]
 
     imdata, perm, img_keys, hwf = load_colmap_data(basedir)
+    print(f'imdata: {imdata}, perm: {perm}, img_keys: {img_keys}, hwf: {hwf}')
+    print(1/0)
     scale_x, scale_y = resized_width / float(hwf[1]), resized_height / float(hwf[0])
 
     K = np.eye(3)

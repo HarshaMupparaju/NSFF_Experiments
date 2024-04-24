@@ -13,7 +13,7 @@ from kornia import create_meshgrid
 from render_utils import *
 from run_nerf_helpers import *
 from load_llff import *
-
+from tqdm import tqdm
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 np.random.seed(1)
 DEBUG = False
@@ -326,7 +326,7 @@ def train():
 
     chain_bwd = 0
 
-    for i in range(start, N_iters):
+    for i in tqdm(range(start, N_iters)):
         chain_bwd = 1 - chain_bwd
         time0 = time.time()
         print('expname ', expname, ' chain_bwd ', chain_bwd, 
@@ -341,7 +341,7 @@ def train():
         target = images[img_i].cuda()
         pose = poses[img_i, :3,:4]
         depth_gt = depths[img_i].cuda()
-        hard_coords = torch.Tensor(motion_coords[img_i]).cuda()
+        # hard_coords = torch.Tensor(motion_coords[img_i]).cuda()
         mask_gt = masks[img_i].cuda()
 
         if img_i == 0:
