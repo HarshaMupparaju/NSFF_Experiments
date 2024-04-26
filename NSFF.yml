@@ -1,0 +1,21 @@
+name: NSFF
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.8
+  - configargparse
+  - cupy
+  - imageio
+  - kornia
+  - matplotlib
+  - opencv
+  - scikit-image
+  - scipy
+  - tqdm
+  - pytorch-cuda=11.7
+  - pytorch==2.0.1
+  - torchaudio==2.0.2
+  - torchvision==0.15.2
+  - conda-forge::tensorboard
+prefix: /home/harshamupparaju/Softwares/Anaconda/anaconda3/envs/NSFF
