@@ -1,7 +1,7 @@
 expname = coffee-martini_ndc_5f_sv_of_sm_unify3
 
 basedir = ./logs
-datadir = /mnt/2tb-hdd/Harsha/NSFF/nerf_data/N3DV/set04/coffee_martini
+datadir = /mnt/2tb-hdd/Harsha/NSFF/nerf_data/N3DV/set04/coffee_martini/dense
 
 dataset_type = llff
 
