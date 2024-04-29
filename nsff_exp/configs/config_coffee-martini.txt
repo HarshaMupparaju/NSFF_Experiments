@@ -9,7 +9,7 @@ factor = 2
 llffhold = 10
 
 N_rand = 1024
-N_samples = 256
+N_samples = 128
 N_importance = 0
 netwidth = 256
 
