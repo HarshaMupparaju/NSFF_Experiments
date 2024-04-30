@@ -8,7 +8,7 @@ from tqdm import tqdm
 unzipped_dirpath = Path('../nerf_data/dynerf_zipped/')
 output_dirpath = Path('../nerf_data/dynerf/')
 
-scene_names = ['coffee_martini', 'cook_spinach', 'cut_roasted_beef', 'flame_salmon_1', 'flame_steak', 'sear_steak']
+scene_names = ['flame_steak', 'sear_steak']
 
 for scene_name in scene_names:
     scene_dirpath = unzipped_dirpath / scene_name

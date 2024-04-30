@@ -97,8 +97,6 @@ def motion_segmentation(basedir, threshold):
     resized_height, resized_width = shape_0[0], shape_0[1]
 
     imdata, perm, img_keys, hwf = load_colmap_data(basedir)
-    print(f'imdata: {imdata}, perm: {perm}, img_keys: {img_keys}, hwf: {hwf}')
-    print(1/0)
     scale_x, scale_y = resized_width / float(hwf[1]), resized_height / float(hwf[0])
 
     K = np.eye(3)
@@ -448,4 +446,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     run_optical_flows(args)
-    motion_segmentation(args.data_path, args.epi_threshold)
+    # motion_segmentation(args.data_path, args.epi_threshold)

@@ -22,7 +22,7 @@ no_batching = True
 spherify = False
 decay_depth_w = True
 decay_optical_flow_w = True
-use_motion_mask = False
+use_motion_mask = True
 num_extra_sample = 512
 chain_sf = True
 

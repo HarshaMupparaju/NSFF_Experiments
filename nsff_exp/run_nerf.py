@@ -309,7 +309,8 @@ def train():
 
     poses = torch.Tensor(poses).to(device)
 
-    N_iters = 2000 * 1000 #1000000
+    # N_iters = 2000 * 1000 #1000000
+    N_iters = 360 * 1000
     print('Begin')
     print('TRAIN views are', i_train)
     print('TEST views are', i_test)
@@ -341,7 +342,7 @@ def train():
         target = images[img_i].cuda()
         pose = poses[img_i, :3,:4]
         depth_gt = depths[img_i].cuda()
-        # hard_coords = torch.Tensor(motion_coords[img_i]).cuda()
+        hard_coords = torch.Tensor(motion_coords[img_i]).cuda()
         mask_gt = masks[img_i].cuda()
 
         if img_i == 0:
