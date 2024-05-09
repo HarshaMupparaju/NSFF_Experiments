@@ -1,4 +1,4 @@
-expname = coffee-martini_ndc_5f_sv_of_sm_unify3
+expname = coffee-martini_sparse_flow_dense_flow_priors
 
 basedir = ./logs
 datadir = ../nerf_data/N3DV/set04/coffee_martini/dense
@@ -40,4 +40,4 @@ final_height = 1014
 
 use_sparse_flow = False
 num_extra_sample_sparse_flow = 512
-w_sparse_flow_loss = 0.1
+w_sparse_flow_loss = 0.01
