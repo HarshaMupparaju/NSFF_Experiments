@@ -350,11 +350,11 @@ def train():
         hard_coords = torch.Tensor(motion_coords[img_i]).cuda()
         mask_gt = masks[img_i].cuda()
         #TODO: Dont Hard code the if conditions
-        if img_i == 0 | img_i == 10 | img_i == 20:
+        if (img_i == 0 or img_i == 10 or img_i == 20):
             flow_fwd, fwd_mask = read_optical_flow(args.datadir, img_i, 
                                                 args.start_frame, fwd=True)
             flow_bwd, bwd_mask = np.zeros_like(flow_fwd), np.zeros_like(fwd_mask)
-        elif img_i == num_img - 1 | img_i == 19 |img_i == 9:
+        elif (img_i == num_img - 1 or img_i == 19 or img_i == 9):
             flow_bwd, bwd_mask = read_optical_flow(args.datadir, img_i, 
                                                 args.start_frame, fwd=False)
             flow_fwd, fwd_mask = np.zeros_like(flow_bwd), np.zeros_like(bwd_mask)
