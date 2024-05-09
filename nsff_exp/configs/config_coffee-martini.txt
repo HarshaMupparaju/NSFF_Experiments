@@ -22,7 +22,7 @@ no_batching = True
 spherify = False
 decay_depth_w = True
 decay_optical_flow_w = True
-use_motion_mask = True
+use_motion_mask = False
 num_extra_sample = 512
 chain_sf = True
 
@@ -37,3 +37,7 @@ end_frame = 30
 decay_iteration = 30
 
 final_height = 1014
+
+use_sparse_flow = False
+num_extra_sample_sparse_flow = 512
+w_sparse_flow_loss = 0.1

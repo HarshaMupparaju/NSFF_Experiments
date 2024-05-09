@@ -8,6 +8,7 @@ import os
 import skimage
 from scipy.spatial.transform import Rotation
 from database import COLMAPDatabase, array_to_blob
+from colmapUtils.get_inliers import get_inliers
 
 def save_tmp_data(sparse_dirpath: Path, images_dirpath:Path, camera_path: Path, points_path: Path, images: np.ndarray, intrinsics: np.ndarray):
     # TODO: handle differing intrinsics as well
@@ -80,14 +81,6 @@ def run_colmap(db_path:Path, images_dirpath:Path, sparse_dirpath:Path, images_pa
     print(cmd)
     os.system(cmd)
 
-    cmd = f'colmap point_triangulator --database_path {db_path.as_posix()} --image_path {images_dirpath.as_posix()} --input_path {sparse_dirpath.as_posix()} --output_path {sparse_dirpath.as_posix()} --Mapper.tri_ignore_two_view_tracks 0 --Mapper.num_threads 16 --Mapper.init_min_tri_angle 4 --Mapper.multiple_models 0 --Mapper.extract_colors 0'
-    # cmd = f'colmap point_triangulator --database_path {db_path.as_posix()} --image_path {images_dirpath.as_posix()} --import_path {sparse_dirpath.as_posix()} --export_path {sparse_dirpath.as_posix()} --Mapper.tri_ignore_two_view_tracks 0 --Mapper.num_threads 16 --Mapper.init_min_tri_angle 4 --Mapper.multiple_models 0 --Mapper.extract_colors 0'
-    print(cmd)
-    os.system(cmd)
-
-    cmd = f'colmap model_converter --input_path {sparse_dirpath.as_posix()} --output_path {sparse_dirpath.as_posix()} --output_type TXT'
-    print(cmd)
-    os.system(cmd)
     return
 
 @staticmethod
@@ -198,7 +191,7 @@ def demo1():
     scene_names = ['coffee_martini', 'cook_spinach', 'cut_roasted_beef', 'flame_steak', 'sear_steak']
     set_num = 4
     preprocess_dynerf(dataset_name, scene_names, set_num)
-    # run_colmap_wrapper(dataset_name, scene_names, set_num)
+    run_colmap_wrapper(dataset_name, scene_names, set_num)
     return
 
 def main():

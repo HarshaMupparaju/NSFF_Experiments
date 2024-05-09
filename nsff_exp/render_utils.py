@@ -902,7 +902,7 @@ def get_rigid_outputs(pts, viewdirs,
                       # netowrk_blend,
                       z_vals, rays_d, 
                       raw_noise_std):
-
+    #Network is used here
     # with torch.no_grad():        
     raw_rigid = network_query_fn(pts[..., :3], viewdirs, network_rigid)
     raw_rgba_rigid = raw_rigid[..., :4]

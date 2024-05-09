@@ -156,6 +156,12 @@ def config_parser():
     parser.add_argument("--i_weights", type=int, default=10000, 
                         help='frequency of weight ckpt saving')
 
+    #Sparse flow options
+    parser.add_argument("--use_sparse_flow", type=bool, default=False,
+                        help='use sparse flow for cross-view')
+    parser.add_argument("--num_extra_sample_sparse_flow", type=int, default=512,)
+    parser.add_argument("--w_sparse_flow_loss", type=float, default=0.1, 
+                        help='weights of sparse flow loss')
     return parser
 
 
@@ -335,7 +341,6 @@ def train():
         print('Random FROM SINGLE IMAGE')
         # Random from one image
         img_i = np.random.choice(i_train)
-
         if i % (decay_iteration * 1000) == 0:
             torch.cuda.empty_cache()
 
@@ -344,12 +349,12 @@ def train():
         depth_gt = depths[img_i].cuda()
         hard_coords = torch.Tensor(motion_coords[img_i]).cuda()
         mask_gt = masks[img_i].cuda()
-
-        if img_i == 0:
+        #TODO: Dont Hard code the if conditions
+        if img_i == 0 | img_i == 10 | img_i == 20:
             flow_fwd, fwd_mask = read_optical_flow(args.datadir, img_i, 
                                                 args.start_frame, fwd=True)
             flow_bwd, bwd_mask = np.zeros_like(flow_fwd), np.zeros_like(fwd_mask)
-        elif img_i == num_img - 1:
+        elif img_i == num_img - 1 | img_i == 19 |img_i == 9:
             flow_bwd, bwd_mask = read_optical_flow(args.datadir, img_i, 
                                                 args.start_frame, fwd=False)
             flow_fwd, fwd_mask = np.zeros_like(flow_bwd), np.zeros_like(bwd_mask)
@@ -360,6 +365,32 @@ def train():
             flow_bwd, bwd_mask = read_optical_flow(args.datadir, 
                                                 img_i, args.start_frame, 
                                                 fwd=False)
+
+        #Read sparse flow 
+        if args.use_sparse_flow:
+            sparse_flow = read_sparse_flow(args.datadir, img_i, args.start_frame)
+            x1 = sparse_flow[sparse_flow['frame1_num'] == img_i]['x1'].values
+            y1 = sparse_flow[sparse_flow['frame1_num'] == img_i]['y1'].values
+            x2 = sparse_flow[sparse_flow['frame2_num'] == img_i]['x2'].values
+            y2 = sparse_flow[sparse_flow['frame2_num'] == img_i]['y2'].values
+            x = np.concatenate([x1, x2])
+            y = np.concatenate([y1, y2])
+
+            img2_num1 = sparse_flow[sparse_flow['frame1_num'] == img_i]['frame2_num'].values
+            img2_num2 = sparse_flow[sparse_flow['frame2_num'] == img_i]['frame1_num'].values
+            img2_num = np.concatenate([img2_num1, img2_num2])
+            img2_x1 = sparse_flow[sparse_flow['frame2_num'] == img_i]['x1'].values
+            img2_y1 = sparse_flow[sparse_flow['frame2_num'] == img_i]['y1'].values
+            img2_x2 = sparse_flow[sparse_flow['frame1_num'] == img_i]['x2'].values
+            img2_y2 = sparse_flow[sparse_flow['frame1_num'] == img_i]['y2'].values
+
+            img2_x = np.concatenate([img2_x1, img2_x2])
+            img2_y = np.concatenate([img2_y1, img2_y2])
+
+            img2_coords = np.stack([img2_num, img2_y, img2_x], -1)
+            
+            sparse_coords = np.stack([y, x], -1)
+            sparse_coords = torch.Tensor(sparse_coords).cuda().long()
 
         # # ======================== TEST 
         TEST = False
@@ -410,7 +441,9 @@ def train():
         # more correct way for flow loss
         flow_fwd = flow_fwd + uv_grid
         flow_bwd = flow_bwd + uv_grid
-
+        #Random coordinates picked here
+        #TODO: Pick some coordinates from sparse flow regions
+        #TODO: Pick some coordinates from dense flow regions
         if N_rand is not None:
             rays_o, rays_d = get_rays(H, W, focal, torch.Tensor(pose))  # (H, W, 3), (H, W, 3)
             
@@ -434,17 +467,37 @@ def train():
 
                 select_coords = torch.cat([select_coords_all, select_coords_hard], 0)
 
+            elif(args.use_sparse_flow and i < decay_iteration * 1000):
+            
+                print('USE SPARSE FLOW PRIOR')
+                num_extra_sample_sparse_flow = args.num_extra_sample_sparse_flow
+                select_inds_sparse = np.random.choice(sparse_coords.shape[0],
+                                                        size=[min(sparse_coords.shape[0],
+                                                            num_extra_sample_sparse_flow)],
+                                                        replace=False)
+                select_coords_sparse = sparse_coords[select_inds_sparse].long()
+            
+            
+                select_inds_all = np.random.choice(coords.shape[0],
+                                                    size=[N_rand],
+                                                    replace=False) # (N_rand,)
+                select_coords_all = coords[select_inds_all].long()
+                select_coords = torch.cat([select_coords_all, select_coords_sparse], 0)
+                sparse_flow_mask = torch.ones_like(select_coords[:, 0])
+                sparse_flow_mask[:N_rand] = 0
+
             else:
                 select_inds = np.random.choice(coords.shape[0], 
                                             size=[N_rand], 
                                             replace=False)  # (N_rand,)
                 select_coords = coords[select_inds].long()  # (N_rand, 2)
-            
+
             rays_o = rays_o[select_coords[:, 0], 
                             select_coords[:, 1]]  # (N_rand, 3)
             rays_d = rays_d[select_coords[:, 0], 
                             select_coords[:, 1]]  # (N_rand, 3)
             batch_rays = torch.stack([rays_o, rays_d], 0)
+            select_coords = select_coords[sparse_flow_mask == 0]
             target_rgb = target[select_coords[:, 0], 
                                 select_coords[:, 1]]  # (N_rand, 3)
             target_depth = depth_gt[select_coords[:, 0], 
@@ -471,7 +524,7 @@ def train():
             chain_5frames = False
 
         print('chain_5frames ', chain_5frames, ' chain_bwd ', chain_bwd)
-
+        #Network output
         ret = render(img_idx_embed, 
                      chain_bwd, 
                      chain_5frames,
@@ -480,6 +533,15 @@ def train():
                      rays=batch_rays,
                      verbose=i < 10, retraw=True,
                      **render_kwargs_train)
+        pts_3d = ret['raw_pts_ref']
+        pts_3d_sparse = pts_3d[sparse_flow_mask == 1]
+        weights_sparse = ret['weights_ref_dy'][sparse_flow_mask == 1]
+
+        for k in ret:
+            ret[k] = ret[k][sparse_flow_mask == 0]
+
+
+
 
         pose_post = poses[min(img_i + 1, int(num_img) - 1), :3,:4]
         pose_prev = poses[max(img_i - 1, 0), :3,:4]
@@ -498,7 +560,7 @@ def train():
         weight_prev = 1. - ret['raw_prob_ref2prev']
         prob_reg_loss = args.w_prob_reg * (torch.mean(torch.abs(ret['raw_prob_ref2prev'])) \
                                 + torch.mean(torch.abs(ret['raw_prob_ref2post'])))
-
+        #TODO: Adjust the losses such that the cross view losses are not computed anywhere except for sparse flow loss
         # dynamic rendering loss
         if i <= decay_iteration * 1000:
             # dynamic rendering loss
@@ -597,6 +659,16 @@ def train():
                                                     H, W, focal)
         entropy_loss = args.w_entropy * torch.mean(-ret['raw_blend_w'] * torch.log(ret['raw_blend_w'] + 1e-8))
 
+        # sparse flow loss
+        if args.use_sparse_flow:
+            poses_sparse =  poses[img2_coords[:, 0], :3, :4]
+            pts_2d_img2 = project_3d_to_2d(poses_sparse, H, W, focal, pts_3d_sparse, weights_sparse)
+
+            pts_2d_img2_gt = torch.Tensor(img2_coords[:, 1:]).cuda().float()
+            sparse_flow_loss = args.w_sparse_flow_loss * compute_sparse_flow_loss(pts_2d_img2, 
+                                                        pts_2d_img2_gt)
+
+
         # # ======================================  two-frames chain loss ===============================
         if chain_bwd:
             sf_sm_loss += args.w_sm * compute_sf_lke_loss(ret['raw_pts_prev'], 
@@ -620,7 +692,8 @@ def train():
         loss = sf_reg_loss + sf_cycle_loss + \
                render_loss + flow_loss + \
                sf_sm_loss + prob_reg_loss + \
-               depth_loss + entropy_loss 
+               depth_loss + entropy_loss + \
+               sparse_flow_loss
 
         print('render_loss ', render_loss.item(), 
               ' bidirection_loss ', sf_cycle_loss.item(), 
@@ -630,6 +703,7 @@ def train():
               ' sf_sm_loss ', sf_sm_loss.item())
         print('prob_reg_loss ', prob_reg_loss.item(),
               ' entropy_loss ', entropy_loss.item())
+        print('sparse_flow_loss ', sparse_flow_loss.item())
         loss.backward()
         optimizer.step()
 

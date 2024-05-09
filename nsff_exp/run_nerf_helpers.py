@@ -564,6 +564,28 @@ def projection_from_ndc(c2w, H, W, f, weights_ref, raw_pts, n_dim=1):
 
     return pts_2d
 
+def projection_from_ndc_sparse(c2w_mats, H, W, f, weights_ref, raw_pts, n_dim=1):
+    R_w2c_mats = c2w_mats[:, :3, :3].transpose(1, 2)
+    t_w2c_mats = -torch.matmul(R_w2c_mats, c2w_mats[:, :3, 3:])
+    pts_3d = torch.sum(weights_ref[...,None] * raw_pts, -2)  # [N_rays, 3]
+
+    pts_3d_e_world = NDC2Euclidean(pts_3d, H, W, f)
+
+    if n_dim == 1:
+        pts_3d_e_local = se3_transform_points(pts_3d_e_world,
+                                                R_w2c_mats, 
+                                                t_w2c_mats)
+    else:
+        pts_3d_e_local = se3_transform_points(pts_3d_e_world, 
+                                              R_w2c_mats, 
+                                              t_w2c_mats)
+    
+    pts_2d = perspective_projection(pts_3d_e_local, H, W, f)
+
+    return pts_2d
+                                                     
+
+
 def compute_optical_flow(pose_post, pose_ref, pose_prev, H, W, focal, ret, n_dim=1):
     pts_2d_post = projection_from_ndc(pose_post, H, W, focal, 
                                       ret['weights_ref_dy'], 
@@ -575,6 +597,10 @@ def compute_optical_flow(pose_post, pose_ref, pose_prev, H, W, focal, ret, n_dim
                                       n_dim)
 
     return pts_2d_post, pts_2d_prev
+
+def project_3d_to_2d(poses, H, W, focal, raw_pts, weights_ref, n_dim=1):
+    pts_2d = projection_from_ndc_sparse(poses, H, W, focal, weights_ref, raw_pts, n_dim)
+    return pts_2d
 
 def read_optical_flow(basedir, img_i, start_frame, fwd):
     import os
@@ -599,6 +625,15 @@ def read_optical_flow(basedir, img_i, start_frame, fwd):
 
       return bwd_flow, bwd_mask
 
+def read_sparse_flow(basedir, img_i, start_frame):
+    from pathlib import Path
+    import pandas as pd
+    flow_dir = Path(basedir) / 'sparse_flow_colmap'
+    flow_path = flow_dir / 'matched_pixels.csv'
+    flow_df = pd.read_csv(flow_path).astype(int)
+    flow_df = flow_df[(flow_df['frame1_num'] == start_frame + img_i) | (flow_df['frame2_num'] == start_frame + img_i)]
+    return flow_df
+    
 
 def warp_flow(img, flow):
     h, w = flow.shape[:2]
@@ -650,3 +685,9 @@ def compute_sf_lke_loss(pts_ref_ndc, pts_post_ndc, pts_prev_ndc, H, W, f):
     scene_flow_w_prev2ref = pts_3d_ref_world - pts_3d_prev_world
 
     return 0.5 * torch.mean((scene_flow_w_ref2post - scene_flow_w_prev2ref) ** 2)
+
+def compute_sparse_flow_loss(pts_2d_pred, pts_2d_gt):
+    return torch.mean((pts_2d_pred[:, 0] - pts_2d_gt[:, 0]) ** 2 + (pts_2d_pred[:, 1] - pts_2d_gt[:, 1]) ** 2)
+
+def compute_dense_flow_loss():
+    pass
