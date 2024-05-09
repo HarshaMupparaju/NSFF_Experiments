@@ -631,7 +631,7 @@ def read_sparse_flow(basedir, img_i, start_frame):
     flow_dir = Path(basedir) / 'sparse_flow_colmap'
     flow_path = flow_dir / 'matched_pixels.csv'
     flow_df = pd.read_csv(flow_path).astype(int)
-    flow_df = flow_df[(flow_df['frame1_num'] == start_frame + img_i) | (flow_df['frame2_num'] == start_frame + img_i)]
+    flow_df = flow_df[((flow_df['frame1_num'] == start_frame + img_i) & (flow_df['frame2_num'] % 10 > (start_frame + img_i) % 10)) | ((flow_df['frame2_num'] == start_frame + img_i) & (flow_df['frame2_num'] % 10 > (start_frame + img_i) % 10))]
     return flow_df
     
 
@@ -687,7 +687,10 @@ def compute_sf_lke_loss(pts_ref_ndc, pts_post_ndc, pts_prev_ndc, H, W, f):
     return 0.5 * torch.mean((scene_flow_w_ref2post - scene_flow_w_prev2ref) ** 2)
 
 def compute_sparse_flow_loss(pts_2d_pred, pts_2d_gt):
-    return torch.mean((pts_2d_pred[:, 0] - pts_2d_gt[:, 0]) ** 2 + (pts_2d_pred[:, 1] - pts_2d_gt[:, 1]) ** 2)
+    if(pts_2d_pred.shape[0] == 0):
+        return  torch.Tensor([0.0])
+    else:
+        return torch.mean(torch.abs(pts_2d_pred[:, 0] - pts_2d_gt[:, 0])  + torch.abs(pts_2d_pred[:, 1] - pts_2d_gt[:, 1]) )
 
 def compute_dense_flow_loss():
     pass

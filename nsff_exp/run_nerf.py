@@ -476,7 +476,7 @@ def train():
                                                             num_extra_sample_sparse_flow)],
                                                         replace=False)
                 select_coords_sparse = sparse_coords[select_inds_sparse].long()
-            
+                img2_coords = img2_coords[select_inds_sparse]
             
                 select_inds_all = np.random.choice(coords.shape[0],
                                                     size=[N_rand],
