@@ -688,9 +688,11 @@ def compute_sf_lke_loss(pts_ref_ndc, pts_post_ndc, pts_prev_ndc, H, W, f):
 
 def compute_sparse_flow_loss(pts_2d_pred, pts_2d_gt):
     if(pts_2d_pred.shape[0] == 0):
-        return  torch.Tensor([0.0])
+        return torch.Tensor([0.0])
     else:
-        return torch.mean(torch.abs(pts_2d_pred[:, 0] - pts_2d_gt[:, 0])  + torch.abs(pts_2d_pred[:, 1] - pts_2d_gt[:, 1]) )
+        loss = torch.linalg.norm(pts_2d_pred - pts_2d_gt, dim=1, ord=1)
+        # return torch.mean(torch.abs(pts_2d_pred[:, 0] - pts_2d_gt[:, 0])  + torch.abs(pts_2d_pred[:, 1] - pts_2d_gt[:, 1]) )
+        return loss
 
 def compute_dense_flow_loss():
     pass

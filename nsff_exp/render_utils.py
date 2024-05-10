@@ -921,6 +921,7 @@ def compute_2d_prob(weights_p_mix,
     return prob_map_p
 
 def render_rays(img_idx, 
+                img,
                 chain_bwd,
                 chain_5frames,
                 num_img,
@@ -1038,10 +1039,12 @@ def render_rays(img_idx,
         ret['weights_ref_dy'] = weights_ref_dy
         ret['raw_blend_w'] = raw_blend_w
 
-    img_idx_rep_post = torch.ones_like(pts[:, :, 0:1]) * (img_idx + 1./num_img * 2. )
+    img_idx_post = (((img + 1) % 10) / 10.) * 2. - 1
+    img_idx_rep_post = torch.ones_like(pts[:, :, 0:1]) * img_idx_post
     pts_post = torch.cat([(pts_ref[:, :, :3] + raw_sf_ref2post), img_idx_rep_post] , -1)
 
-    img_idx_rep_prev = torch.ones_like(pts[:, :, 0:1]) * (img_idx - 1./num_img * 2. )    
+    img_idx_prev = (((img - 1) % 10) / 10.) * 2. - 1
+    img_idx_rep_prev = torch.ones_like(pts[:, :, 0:1]) * img_idx_prev    
     pts_prev = torch.cat([(pts_ref[:, :, :3] + raw_sf_ref2prev), img_idx_rep_prev] , -1)
 
     # render points at t - 1
@@ -1092,7 +1095,8 @@ def render_rays(img_idx,
     # # ======================================  two-frames chain loss ===============================
     if chain_bwd:
         # render point frames at t - 2
-        img_idx_rep_prevprev = torch.ones_like(pts[:, :, 0:1]) * (img_idx - 2./num_img * 2. )    
+        img_idx_prevprev = (((img - 2) % 10) / 10.) * 2. - 1
+        img_idx_rep_prevprev = torch.ones_like(pts[:, :, 0:1]) * img_idx_prevprev   
         pts_prevprev = torch.cat([(pts_prev[:, :, :3] + raw_sf_prev2prevprev), img_idx_rep_prevprev] , -1)
         ret['raw_pts_pp'] = pts_prevprev[:, :, :3]
 
@@ -1109,7 +1113,8 @@ def render_rays(img_idx,
 
     else:
         # render points at t + 2
-        img_idx_rep_postpost = torch.ones_like(pts[:, :, 0:1]) * (img_idx + 2./num_img * 2. )    
+        img_idx_post_post = (((img + 2) % 10) / 10.) * 2. - 1
+        img_idx_rep_postpost = torch.ones_like(pts[:, :, 0:1]) * img_idx_post_post    
         pts_postpost = torch.cat([(pts_post[:, :, :3] + raw_sf_post2postpost), img_idx_rep_postpost] , -1)
         ret['raw_pts_pp'] = pts_postpost[:, :, :3]
 

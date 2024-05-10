@@ -162,6 +162,10 @@ def config_parser():
     parser.add_argument("--num_extra_sample_sparse_flow", type=int, default=512,)
     parser.add_argument("--w_sparse_flow_loss", type=float, default=0.1, 
                         help='weights of sparse flow loss')
+    
+    #Multiview options
+    parser.add_argument("--multiview", type=bool, default=False, 
+                        help='use multiview setup')
     return parser
 
 
@@ -515,7 +519,8 @@ def train():
             target_bwd_mask = bwd_mask[select_coords[:, 0], 
                                      select_coords[:, 1]].unsqueeze(-1)#.repeat(1, 2)
 
-        img_idx_embed = img_i/num_img * 2. - 1.0
+        # img_idx_embed = img_i/num_img * 2. - 1.0
+        img_idx_embed = ((img_i) % 10) / 10. * 2. - 1.0
 
         #####  Core optimization loop  #####
         if args.chain_sf and i > decay_iteration * 1000 * 2:
@@ -525,7 +530,8 @@ def train():
 
         print('chain_5frames ', chain_5frames, ' chain_bwd ', chain_bwd)
         #Network output
-        ret = render(img_idx_embed, 
+        ret = render(img_idx_embed,
+                     img_i, 
                      chain_bwd, 
                      chain_5frames,
                      num_img, H, W, focal, 
@@ -540,11 +546,22 @@ def train():
         for k in ret:
             ret[k] = ret[k][sparse_flow_mask == 0]
 
+        post_num = img_i + 1
+        prev_num = img_i - 1
+        if args.multiview:
+            if(img_i == 9 or img_i == 19 or img_i == 29):
+                post_num = img_i
+            else:
+                post_num = img_i + 1
+
+            if(img_i == 0 or img_i == 10 or img_i == 20):
+                prev_num = img_i
+            else:
+                prev_num = img_i - 1
 
 
-
-        pose_post = poses[min(img_i + 1, int(num_img) - 1), :3,:4]
-        pose_prev = poses[max(img_i - 1, 0), :3,:4]
+        pose_post = poses[min(post_num, int(num_img) - 1), :3,:4]
+        pose_prev = poses[max(prev_num - 1, 0), :3,:4]
 
         render_of_fwd, render_of_bwd = compute_optical_flow(pose_post, 
                                                             pose, pose_prev, 
@@ -622,12 +639,12 @@ def train():
 
         print('w_depth ', w_depth, 'w_of ', w_of)
 
-        if img_i == 0:
+        if (img_i == 0 or img_i == 10 or img_i == 20):
             print('only fwd flow')
             flow_loss = w_of * compute_mae(render_of_fwd, 
                                         target_of_fwd, 
                                         target_fwd_mask)#torch.sum(torch.abs(render_of_fwd - target_of_fwd) * target_fwd_mask)/(torch.sum(target_fwd_mask) + 1e-8)
-        elif img_i == num_img - 1:
+        elif (img_i == num_img - 1 or img_i == 19 or img_i == 9):
             print('only bwd flow')
             flow_loss = w_of * compute_mae(render_of_bwd, 
                                         target_of_bwd, 
