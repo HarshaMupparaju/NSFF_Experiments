@@ -551,7 +551,7 @@ def batchify_rays(img_idx, img, chain_bwd, chain_5frames,
     return all_ret
 
 
-def render(img_idx, img,  chain_bwd, chain_5frames,
+def render(img_idx, img, chain_bwd, chain_5frames,
            num_img, H, W, focal,     
            chunk=1024*16, rays=None, c2w=None, ndc=True,
            near=0., far=1.,
