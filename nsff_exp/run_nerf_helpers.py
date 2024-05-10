@@ -692,7 +692,7 @@ def compute_sparse_flow_loss(pts_2d_pred, pts_2d_gt):
     else:
         loss = torch.linalg.norm(pts_2d_pred - pts_2d_gt, dim=1, ord=1)
         # return torch.mean(torch.abs(pts_2d_pred[:, 0] - pts_2d_gt[:, 0])  + torch.abs(pts_2d_pred[:, 1] - pts_2d_gt[:, 1]) )
-        return loss
+        return torch.mean(loss)
 
 def compute_dense_flow_loss():
     pass

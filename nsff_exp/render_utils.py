@@ -532,14 +532,14 @@ def run_network(inputs, viewdirs, fn, embed_fn, embeddirs_fn, netchunk=1024*16):
     return outputs
 
 
-def batchify_rays(img_idx, chain_bwd, chain_5frames, 
+def batchify_rays(img_idx, img, chain_bwd, chain_5frames, 
                 num_img, rays_flat, chunk=1024*16, **kwargs):
     """Render rays in smaller minibatches to avoid OOM.
     """
 
     all_ret = {}
     for i in range(0, rays_flat.shape[0], chunk):
-        ret = render_rays(img_idx, chain_bwd, chain_5frames, 
+        ret = render_rays(img_idx, img, chain_bwd, chain_5frames, 
                         num_img, rays_flat[i:i+chunk], **kwargs)
         for k in ret:
             if k not in all_ret:
@@ -551,7 +551,7 @@ def batchify_rays(img_idx, chain_bwd, chain_5frames,
     return all_ret
 
 
-def render(img_idx, chain_bwd, chain_5frames,
+def render(img_idx, img,  chain_bwd, chain_5frames,
            num_img, H, W, focal,     
            chunk=1024*16, rays=None, c2w=None, ndc=True,
            near=0., far=1.,
@@ -612,7 +612,7 @@ def render(img_idx, chain_bwd, chain_5frames,
         rays = torch.cat([rays, viewdirs], -1)
 
     # Render and reshape
-    all_ret = batchify_rays(img_idx, chain_bwd, chain_5frames, 
+    all_ret = batchify_rays(img_idx, img, chain_bwd, chain_5frames, 
                         num_img, rays, chunk, **kwargs)
     for k in all_ret:
         k_sh = list(sh[:-1]) + list(all_ret[k].shape[1:])
