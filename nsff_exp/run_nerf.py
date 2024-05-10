@@ -467,7 +467,7 @@ def train():
 
                 select_coords = torch.cat([select_coords_all, select_coords_hard], 0)
 
-            elif(args.use_sparse_flow and i < decay_iteration * 1000):
+            elif(args.use_sparse_flow):
             
                 print('USE SPARSE FLOW PRIOR')
                 num_extra_sample_sparse_flow = args.num_extra_sample_sparse_flow
