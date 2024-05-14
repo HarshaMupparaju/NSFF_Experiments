@@ -805,7 +805,8 @@ def train():
             #                 flow_bwd_rgb, global_step=i, dataformats='HWC')
 
             with torch.no_grad():
-                ret = render(img_idx_embed, 
+                ret = render(img_idx_embed,
+                             img_i,
                              chain_bwd, False,
                              num_img, H, W, focal, 
                              chunk=1024*16, 
