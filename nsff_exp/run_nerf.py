@@ -162,6 +162,10 @@ def config_parser():
     parser.add_argument("--num_extra_sample_sparse_flow", type=int, default=512,)
     parser.add_argument("--w_sparse_flow_loss", type=float, default=0.1, 
                         help='weights of sparse flow loss')
+
+    #Dense flow options
+    parser.add_argument("--use_dense_flow_prior", action='store_true',
+                        help='to disable cross-view dense flow')
     
     #Multiview options
     parser.add_argument("--multiview", action='store_true',
@@ -355,18 +359,18 @@ def train():
         mask_gt = masks[img_i].cuda()
         #TODO: Dont Hard code the if conditions
         if (img_i == 0 or img_i == 10 or img_i == 20):
-            flow_fwd, fwd_mask = read_optical_flow(args.datadir, img_i, 
+            flow_fwd, fwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior, img_i,
                                                 args.start_frame, fwd=True)
             flow_bwd, bwd_mask = np.zeros_like(flow_fwd), np.zeros_like(fwd_mask)
         elif (img_i == num_img - 1 or img_i == 19 or img_i == 9):
-            flow_bwd, bwd_mask = read_optical_flow(args.datadir, img_i, 
+            flow_bwd, bwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior, img_i,
                                                 args.start_frame, fwd=False)
             flow_fwd, fwd_mask = np.zeros_like(flow_bwd), np.zeros_like(bwd_mask)
         else:
-            flow_fwd, fwd_mask = read_optical_flow(args.datadir, 
+            flow_fwd, fwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior,
                                                 img_i, args.start_frame, 
                                                 fwd=True)
-            flow_bwd, bwd_mask = read_optical_flow(args.datadir, 
+            flow_bwd, bwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior,
                                                 img_i, args.start_frame, 
                                                 fwd=False)
 
@@ -501,7 +505,8 @@ def train():
             rays_d = rays_d[select_coords[:, 0], 
                             select_coords[:, 1]]  # (N_rand, 3)
             batch_rays = torch.stack([rays_o, rays_d], 0)
-            select_coords = select_coords[sparse_flow_mask == 0]
+            if(args.use_sparse_flow):
+                select_coords = select_coords[sparse_flow_mask == 0]
             target_rgb = target[select_coords[:, 0], 
                                 select_coords[:, 1]]  # (N_rand, 3)
             target_depth = depth_gt[select_coords[:, 0], 
@@ -539,12 +544,14 @@ def train():
                      rays=batch_rays,
                      verbose=i < 10, retraw=True,
                      **render_kwargs_train)
-        pts_3d = ret['raw_pts_ref']
-        pts_3d_sparse = pts_3d[sparse_flow_mask == 1]
-        weights_sparse = ret['weights_ref_dy'][sparse_flow_mask == 1]
+        if(args.use_sparse_flow):
+            pts_3d = ret['raw_pts_ref']
+            pts_3d_sparse = pts_3d[sparse_flow_mask == 1]
+            weights_sparse = ret['weights_ref_dy'][sparse_flow_mask == 1]
 
-        for k in ret:
-            ret[k] = ret[k][sparse_flow_mask == 0]
+        if(args.use_sparse_flow):
+            for k in ret:
+                ret[k] = ret[k][sparse_flow_mask == 0]
 
         post_num = img_i + 1
         prev_num = img_i - 1
@@ -708,12 +715,18 @@ def train():
                                        target_rgb, 
                                        weights_map_dd)
 
+        if(args.use_sparse_flow):
+            loss = sf_reg_loss + sf_cycle_loss + \
+                   render_loss + flow_loss + \
+                   sf_sm_loss + prob_reg_loss + \
+                   depth_loss + entropy_loss + \
+                   sparse_flow_loss
 
-        loss = sf_reg_loss + sf_cycle_loss + \
-               render_loss + flow_loss + \
-               sf_sm_loss + prob_reg_loss + \
-               depth_loss + entropy_loss + \
-               sparse_flow_loss
+        else:
+            loss = sf_reg_loss + sf_cycle_loss + \
+                   render_loss + flow_loss + \
+                   sf_sm_loss + prob_reg_loss + \
+                   depth_loss + entropy_loss
 
         print('render_loss ', render_loss.item(), 
               ' bidirection_loss ', sf_cycle_loss.item(), 
@@ -723,7 +736,8 @@ def train():
               ' sf_sm_loss ', sf_sm_loss.item())
         print('prob_reg_loss ', prob_reg_loss.item(),
               ' entropy_loss ', entropy_loss.item())
-        print('sparse_flow_loss ', sparse_flow_loss.item())
+        if(args.use_sparse_flow):
+            print('sparse_flow_loss ', sparse_flow_loss.item())
         loss.backward()
         optimizer.step()
 

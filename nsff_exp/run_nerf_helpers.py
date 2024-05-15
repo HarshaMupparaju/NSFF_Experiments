@@ -602,9 +602,12 @@ def project_3d_to_2d(poses, H, W, focal, raw_pts, weights_ref, n_dim=1):
     pts_2d = projection_from_ndc_sparse(poses, H, W, focal, weights_ref, raw_pts, n_dim)
     return pts_2d
 
-def read_optical_flow(basedir, img_i, start_frame, fwd):
+def read_optical_flow(basedir, use_dense_flow_prior, img_i, start_frame, fwd):
     import os
-    flow_dir = os.path.join(basedir, 'flow_i1')
+    if(use_dense_flow_prior):
+        flow_dir = os.path.join(basedir, 'flow_i1')
+    else:
+        flow_dir = os.path.join(basedir, 'flow_i1_with_cross_flows')
 
     if fwd:
       fwd_flow_path = os.path.join(flow_dir, 
