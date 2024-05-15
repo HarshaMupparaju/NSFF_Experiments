@@ -157,14 +157,14 @@ def config_parser():
                         help='frequency of weight ckpt saving')
 
     #Sparse flow options
-    parser.add_argument("--use_sparse_flow", type=bool, default=False,
+    parser.add_argument("--use_sparse_flow", action='store_true',
                         help='use sparse flow for cross-view')
     parser.add_argument("--num_extra_sample_sparse_flow", type=int, default=512,)
     parser.add_argument("--w_sparse_flow_loss", type=float, default=0.1, 
                         help='weights of sparse flow loss')
     
     #Multiview options
-    parser.add_argument("--multiview", type=bool, default=False, 
+    parser.add_argument("--multiview", action='store_true',
                         help='use multiview setup')
     return parser
 
