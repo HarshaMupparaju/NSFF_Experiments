@@ -682,8 +682,11 @@ def train():
             pts_2d_img2 = project_3d_to_2d(poses_sparse, H, W, focal, pts_3d_sparse, weights_sparse)
 
             pts_2d_img2_gt = torch.Tensor(img2_coords[:, 1:]).cuda().float()
+
+            pts_2d_img2_gt_x_y_inverted = torch.stack([pts_2d_img2_gt[:, 1],
+                                                        pts_2d_img2_gt[:, 0]], -1)
             sparse_flow_loss = args.w_sparse_flow_loss * compute_sparse_flow_loss(pts_2d_img2, 
-                                                        pts_2d_img2_gt)
+                                                                                  pts_2d_img2_gt_x_y_inverted) 
 
 
         # # ======================================  two-frames chain loss ===============================
