@@ -38,8 +38,10 @@ decay_iteration = 30
 
 final_height = 1014
 
-use_sparse_flow = True
+use_sparse_flow_prior = True
 num_extra_sample_sparse_flow = 512
 w_sparse_flow_loss = 0.01
+
+use_dense_flow_prior = True
 
 multiview = True

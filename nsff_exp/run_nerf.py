@@ -157,7 +157,7 @@ def config_parser():
                         help='frequency of weight ckpt saving')
 
     #Sparse flow options
-    parser.add_argument("--use_sparse_flow", action='store_true',
+    parser.add_argument("--use_sparse_flow_prior", action='store_true',
                         help='use sparse flow for cross-view')
     parser.add_argument("--num_extra_sample_sparse_flow", type=int, default=512,)
     parser.add_argument("--w_sparse_flow_loss", type=float, default=0.1, 
@@ -376,7 +376,7 @@ def train():
                                                 fwd=False)
 
         #Read sparse flow 
-        if args.use_sparse_flow:
+        if args.use_sparse_flow_prior:
             sparse_flow = read_sparse_flow(args.datadir, img_i, args.start_frame)
             x1 = sparse_flow[sparse_flow['frame1_num'] == img_i]['x1'].values
             y1 = sparse_flow[sparse_flow['frame1_num'] == img_i]['y1'].values
@@ -476,7 +476,7 @@ def train():
 
                 select_coords = torch.cat([select_coords_all, select_coords_hard], 0)
 
-            elif(args.use_sparse_flow):
+            elif(args.use_sparse_flow_prior):
             
                 print('USE SPARSE FLOW PRIOR')
                 num_extra_sample_sparse_flow = args.num_extra_sample_sparse_flow
@@ -506,7 +506,7 @@ def train():
             rays_d = rays_d[select_coords[:, 0], 
                             select_coords[:, 1]]  # (N_rand, 3)
             batch_rays = torch.stack([rays_o, rays_d], 0)
-            if(args.use_sparse_flow):
+            if(args.use_sparse_flow_prior):
                 select_coords = select_coords[sparse_flow_mask == 0]
             target_rgb = target[select_coords[:, 0], 
                                 select_coords[:, 1]]  # (N_rand, 3)
@@ -545,12 +545,12 @@ def train():
                      rays=batch_rays,
                      verbose=i < 10, retraw=True,
                      **render_kwargs_train)
-        if(args.use_sparse_flow):
+        if(args.use_sparse_flow_prior):
             pts_3d = ret['raw_pts_ref']
             pts_3d_sparse = pts_3d[sparse_flow_mask == 1]
             weights_sparse = ret['weights_ref_dy'][sparse_flow_mask == 1]
 
-        if(args.use_sparse_flow):
+        if(args.use_sparse_flow_prior):
             for k in ret:
                 ret[k] = ret[k][sparse_flow_mask == 0]
 
@@ -685,7 +685,7 @@ def train():
         entropy_loss = args.w_entropy * torch.mean(-ret['raw_blend_w'] * torch.log(ret['raw_blend_w'] + 1e-8))
 
         # sparse flow loss
-        if args.use_sparse_flow:
+        if args.use_sparse_flow_prior:
             poses_sparse =  poses[img2_coords[:, 0], :3, :4]
             pts_2d_img2 = project_3d_to_2d(poses_sparse, H, W, focal, pts_3d_sparse, weights_sparse)
 
@@ -716,7 +716,7 @@ def train():
                                        target_rgb, 
                                        weights_map_dd)
 
-        if(args.use_sparse_flow):
+        if(args.use_sparse_flow_prior):
             loss = sf_reg_loss + sf_cycle_loss + \
                    render_loss + flow_loss + \
                    sf_sm_loss + prob_reg_loss + \
@@ -737,7 +737,7 @@ def train():
               ' sf_sm_loss ', sf_sm_loss.item())
         print('prob_reg_loss ', prob_reg_loss.item(),
               ' entropy_loss ', entropy_loss.item())
-        if(args.use_sparse_flow):
+        if(args.use_sparse_flow_prior):
             print('sparse_flow_loss ', sparse_flow_loss.item())
         loss.backward()
         optimizer.step()
