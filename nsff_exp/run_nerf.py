@@ -789,7 +789,8 @@ def train():
             writer.add_scalar("train/sf_reg_loss", sf_reg_loss.item(), i)
             writer.add_scalar("train/sf_cycle_loss", sf_cycle_loss.item(), i)
             writer.add_scalar("train/sf_sm_loss", sf_sm_loss.item(), i)
-
+            if(args.use_sparse_flow_prior):
+                writer.add_scalar("train/sparse_flow_loss", sparse_flow_loss.item(), i)
 
         if i%args.i_img == 0:
             # img_i = np.random.choice(i_val)
