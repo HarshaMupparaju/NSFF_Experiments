@@ -665,8 +665,8 @@ def render_bullet_time(render_poses, target_idx, img_idx_embed, num_img,
             rgb8 = to8b(rgb)
             depth8 = to8b(depth.unsqueeze(-1).repeat(1, 1, 3).cpu().numpy())
 
-            start_y = (rgb8.shape[1] - 512) // 2
-            rgb8 = rgb8[:, start_y:start_y+ 512, :]
+            # start_y = (rgb8.shape[1] - 512) // 2
+            # rgb8 = rgb8[:, start_y:start_y+ 512, :]
 
             # depth8 = depth8[:, start_y:start_y+ 512, :]
 
