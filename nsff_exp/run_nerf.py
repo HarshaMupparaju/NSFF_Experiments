@@ -393,8 +393,8 @@ def train():
             img2_x2 = sparse_flow[sparse_flow['frame1_num'] == img_i]['x2'].values
             img2_y2 = sparse_flow[sparse_flow['frame1_num'] == img_i]['y2'].values
 
-            img2_x = np.concatenate([img2_x1, img2_x2])
-            img2_y = np.concatenate([img2_y1, img2_y2])
+            img2_x = np.concatenate([img2_x2, img2_x1])
+            img2_y = np.concatenate([img2_y2, img2_y1])
 
             img2_coords = np.stack([img2_num, img2_y, img2_x], -1)
             
@@ -451,8 +451,6 @@ def train():
         flow_fwd = flow_fwd + uv_grid
         flow_bwd = flow_bwd + uv_grid
         #Random coordinates picked here
-        #TODO: Pick some coordinates from sparse flow regions
-        #TODO: Pick some coordinates from dense flow regions
         if N_rand is not None:
             rays_o, rays_d = get_rays(H, W, focal, torch.Tensor(pose))  # (H, W, 3), (H, W, 3)
             
@@ -549,23 +547,18 @@ def train():
             pts_3d = ret['raw_pts_ref']
             pts_3d_sparse = pts_3d[sparse_flow_mask == 1]
             weights_sparse = ret['weights_ref_dy'][sparse_flow_mask == 1]
-
-        if(args.use_sparse_flow_prior):
             for k in ret:
                 ret[k] = ret[k][sparse_flow_mask == 0]
+
 
         post_num = img_i + 1
         prev_num = img_i - 1
         if args.multiview:
             if(img_i == 9 or img_i == 19 or img_i == 29):
                 post_num = img_i
-            else:
-                post_num = img_i + 1
 
             if(img_i == 0 or img_i == 10 or img_i == 20):
                 prev_num = img_i
-            else:
-                prev_num = img_i - 1
 
 
         pose_post = poses[min(post_num, int(num_img) - 1), :3,:4]
@@ -688,7 +681,7 @@ def train():
         if args.use_sparse_flow_prior:
             poses_sparse =  poses[img2_coords[:, 0], :3, :4]
             pts_2d_img2 = project_3d_to_2d(poses_sparse, H, W, focal, pts_3d_sparse, weights_sparse)
-
+            pts_2d_img2 = pts_2d_img2.int().float()
             pts_2d_img2_gt = torch.Tensor(img2_coords[:, 1:]).cuda().float()
 
             pts_2d_img2_gt_x_y_inverted = torch.stack([pts_2d_img2_gt[:, 1],

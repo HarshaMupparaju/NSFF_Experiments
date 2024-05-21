@@ -144,6 +144,10 @@ def config_parser():
     parser.add_argument("--decay_iteration", type=int, default=50, 
                         help='data driven priors decay iteration * 10000')
 
+    parser.add_argument("--chain_sf", action='store_true', 
+                        help='5 frame consistency if true, \
+                             otherwise 3 frame consistency')
+
     parser.add_argument("--start_frame", type=int, default=0)
     parser.add_argument("--end_frame", type=int, default=24)
 
@@ -155,6 +159,20 @@ def config_parser():
     parser.add_argument("--i_weights", type=int, default=10000, 
                         help='frequency of weight ckpt saving')
 
+    #Sparse flow options
+    parser.add_argument("--use_sparse_flow_prior", action='store_true',
+                        help='use sparse flow for cross-view')
+    parser.add_argument("--num_extra_sample_sparse_flow", type=int, default=512,)
+    parser.add_argument("--w_sparse_flow_loss", type=float, default=0.1, 
+                        help='weights of sparse flow loss')
+
+    #Dense flow options
+    parser.add_argument("--use_dense_flow_prior", action='store_true',
+                        help='to disable cross-view dense flow')
+    
+    #Multiview options
+    parser.add_argument("--multiview", action='store_true',
+                        help='use multiview setup')
     return parser
 
 
@@ -296,7 +314,7 @@ def evaluation():
                     continue
 
                 c2w = poses[camera_i]
-                ret = render(img_idx_embed, 0, False,
+                ret = render(img_idx_embed, img_i, 0, False,
                              num_img, 
                              H, W, focal, 
                              chunk=1024*16, c2w=c2w[:3,:4], 

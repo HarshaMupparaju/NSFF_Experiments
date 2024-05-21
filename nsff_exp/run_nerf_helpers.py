@@ -635,6 +635,8 @@ def read_sparse_flow(basedir, img_i, start_frame):
     flow_path = flow_dir / 'matched_pixels.csv'
     flow_df = pd.read_csv(flow_path).astype(int)
     flow_df = flow_df[((flow_df['frame1_num'] == start_frame + img_i) & (flow_df['frame2_num'] % 10 > (start_frame + img_i) % 10)) | ((flow_df['frame2_num'] == start_frame + img_i) & (flow_df['frame2_num'] % 10 > (start_frame + img_i) % 10))]
+    # flow_df = flow_df[((flow_df['frame1_num'] == start_frame + img_i) ) | ((flow_df['frame2_num'] == start_frame + img_i))]
+    # assert a.shape[0] == flow_df.shape[0]
     return flow_df
     
 
@@ -696,6 +698,3 @@ def compute_sparse_flow_loss(pts_2d_pred, pts_2d_gt):
         loss = torch.linalg.norm(pts_2d_pred - pts_2d_gt, dim=1, ord=1)
         # return torch.mean(torch.abs(pts_2d_pred[:, 0] - pts_2d_gt[:, 0])  + torch.abs(pts_2d_pred[:, 1] - pts_2d_gt[:, 1]) )
         return torch.mean(loss)
-
-def compute_dense_flow_loss():
-    pass
