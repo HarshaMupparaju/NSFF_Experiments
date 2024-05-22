@@ -149,7 +149,7 @@ def config_parser():
     parser.add_argument("--end_frame", type=int, default=50)
 
     # logging/saving options
-    parser.add_argument("--i_print",   type=int, default=1000, 
+    parser.add_argument("--i_print",   type=int, default=1, 
                         help='frequency of console printout and metric loggin')
     parser.add_argument("--i_img",     type=int, default=1000, 
                         help='frequency of tensorboard image logging')
@@ -359,21 +359,38 @@ def train():
         hard_coords = torch.Tensor(motion_coords[img_i]).cuda()
         mask_gt = masks[img_i].cuda()
         #TODO: Dont Hard code the if conditions
-        if (img_i == 0 or img_i == 10 or img_i == 20):
-            flow_fwd, fwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior, img_i,
-                                                args.start_frame, fwd=True)
-            flow_bwd, bwd_mask = np.zeros_like(flow_fwd), np.zeros_like(fwd_mask)
-        elif (img_i == num_img - 1 or img_i == 19 or img_i == 9):
-            flow_bwd, bwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior, img_i,
-                                                args.start_frame, fwd=False)
-            flow_fwd, fwd_mask = np.zeros_like(flow_bwd), np.zeros_like(bwd_mask)
+        if(args.use_dense_flow_prior):
+            if (img_i == 0 or img_i == 10 or img_i == 20):
+                flow_fwd, fwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior, img_i,
+                                                    args.start_frame, fwd=True)
+                flow_bwd, bwd_mask = np.zeros_like(flow_fwd), np.zeros_like(fwd_mask)
+            elif (img_i == num_img - 1 or img_i == 19 or img_i == 9):
+                flow_bwd, bwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior, img_i,
+                                                    args.start_frame, fwd=False)
+                flow_fwd, fwd_mask = np.zeros_like(flow_bwd), np.zeros_like(bwd_mask)
+            else:
+                flow_fwd, fwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior,
+                                                    img_i, args.start_frame, 
+                                                    fwd=True)
+                flow_bwd, bwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior,
+                                                    img_i, args.start_frame, 
+                                                    fwd=False)
         else:
-            flow_fwd, fwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior,
-                                                img_i, args.start_frame, 
-                                                fwd=True)
-            flow_bwd, bwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior,
-                                                img_i, args.start_frame, 
-                                                fwd=False)
+            if (img_i == 0):
+                flow_fwd, fwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior, img_i,
+                                                    args.start_frame, fwd=True)
+                flow_bwd, bwd_mask = np.zeros_like(flow_fwd), np.zeros_like(fwd_mask)
+            elif (img_i == num_img - 1):
+                flow_bwd, bwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior, img_i,
+                                                    args.start_frame, fwd=False)
+                flow_fwd, fwd_mask = np.zeros_like(flow_bwd), np.zeros_like(bwd_mask)
+            else:
+                flow_fwd, fwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior,
+                                                    img_i, args.start_frame, 
+                                                    fwd=True)
+                flow_bwd, bwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior,
+                                                    img_i, args.start_frame, 
+                                                    fwd=False)
 
         #Read sparse flow 
         if args.use_sparse_flow_prior:
@@ -639,25 +656,43 @@ def train():
         depth_loss = w_depth * compute_depth_loss(ret['depth_map_ref_dy'], -target_depth)
 
         print('w_depth ', w_depth, 'w_of ', w_of)
-
-        if (img_i == 0 or img_i == 10 or img_i == 20):
-            print('only fwd flow')
-            flow_loss = w_of * compute_mae(render_of_fwd, 
-                                        target_of_fwd, 
-                                        target_fwd_mask)#torch.sum(torch.abs(render_of_fwd - target_of_fwd) * target_fwd_mask)/(torch.sum(target_fwd_mask) + 1e-8)
-        elif (img_i == num_img - 1 or img_i == 19 or img_i == 9):
-            print('only bwd flow')
-            flow_loss = w_of * compute_mae(render_of_bwd, 
-                                        target_of_bwd, 
-                                        target_bwd_mask)#torch.sum(torch.abs(render_of_bwd - target_of_bwd) * target_bwd_mask)/(torch.sum(target_bwd_mask) + 1e-8)
+        if(args.use_dense_flow_prior):
+            if (img_i == 0 or img_i == 10 or img_i == 20):
+                print('only fwd flow')
+                flow_loss = w_of * compute_mae(render_of_fwd, 
+                                            target_of_fwd, 
+                                            target_fwd_mask)#torch.sum(torch.abs(render_of_fwd - target_of_fwd) * target_fwd_mask)/(torch.sum(target_fwd_mask) + 1e-8)
+            elif (img_i == num_img - 1 or img_i == 19 or img_i == 9):
+                print('only bwd flow')
+                flow_loss = w_of * compute_mae(render_of_bwd, 
+                                            target_of_bwd, 
+                                            target_bwd_mask)#torch.sum(torch.abs(render_of_bwd - target_of_bwd) * target_bwd_mask)/(torch.sum(target_bwd_mask) + 1e-8)
+            else:
+                flow_loss = w_of * compute_mae(render_of_fwd, 
+                                            target_of_fwd, 
+                                            target_fwd_mask)#torch.sum(torch.abs(render_of_fwd - target_of_fwd) * target_fwd_mask)/(torch.sum(target_fwd_mask) + 1e-8)
+                flow_loss += w_of * compute_mae(render_of_bwd, 
+                                            target_of_bwd, 
+                                            target_bwd_mask)#torch.sum(torch.abs(render_of_bwd - target_of_bwd) * target_bwd_mask)/(torch.sum(target_bwd_mask) + 1e-8)
         else:
-            flow_loss = w_of * compute_mae(render_of_fwd, 
-                                        target_of_fwd, 
-                                        target_fwd_mask)#torch.sum(torch.abs(render_of_fwd - target_of_fwd) * target_fwd_mask)/(torch.sum(target_fwd_mask) + 1e-8)
-            flow_loss += w_of * compute_mae(render_of_bwd, 
-                                        target_of_bwd, 
-                                        target_bwd_mask)#torch.sum(torch.abs(render_of_bwd - target_of_bwd) * target_bwd_mask)/(torch.sum(target_bwd_mask) + 1e-8)
-
+            if (img_i == 0):
+                print('only fwd flow')
+                flow_loss = w_of * compute_mae(render_of_fwd, 
+                                            target_of_fwd, 
+                                            target_fwd_mask)#torch.sum(torch.abs(render_of_fwd - target_of_fwd) * target_fwd_mask)/(torch.sum(target_fwd_mask) + 1e-8)
+            elif (img_i == num_img - 1):
+                print('only bwd flow')
+                flow_loss = w_of * compute_mae(render_of_bwd, 
+                                            target_of_bwd, 
+                                            target_bwd_mask)#torch.sum(torch.abs(render_of_bwd - target_of_bwd) * target_bwd_mask)/(torch.sum(target_bwd_mask) + 1e-8)
+            else:
+                flow_loss = w_of * compute_mae(render_of_fwd, 
+                                            target_of_fwd, 
+                                            target_fwd_mask)#torch.sum(torch.abs(render_of_fwd - target_of_fwd) * target_fwd_mask)/(torch.sum(target_fwd_mask) + 1e-8)
+                flow_loss += w_of * compute_mae(render_of_bwd, 
+                                            target_of_bwd, 
+                                            target_bwd_mask)#torch.sum(torch.abs(render_of_bwd - target_of_bwd) * target_bwd_mask)/(torch.sum(target_bwd_mask) + 1e-8)
+                
         # scene flow smoothness loss
         sf_sm_loss = args.w_sm * (compute_sf_sm_loss(ret['raw_pts_ref'], 
                                                     ret['raw_pts_post'], 
