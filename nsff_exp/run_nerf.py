@@ -570,7 +570,8 @@ def train():
 
         post_num = img_i + 1
         prev_num = img_i - 1
-        if args.multiview:
+        
+        if args.use_dense_flow_prior:
             if(img_i == 9 or img_i == 19 or img_i == 29):
                 post_num = img_i
 
