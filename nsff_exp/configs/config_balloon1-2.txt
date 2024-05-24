@@ -1,6 +1,6 @@
 expname = balloon1-2_ndc_5f_sv_of_unify3
 basedir = ./logs
-datadir = /home/zl548/nvidia_data_full/Balloon1-2/dense/
+datadir = ../nerf_data/nvidia_data_full/Balloon1-2/dense/
 
 dataset_type = llff
 

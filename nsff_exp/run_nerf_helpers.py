@@ -607,8 +607,8 @@ def read_optical_flow(basedir, use_dense_flow_prior, img_i, start_frame, fwd):
     if(use_dense_flow_prior):
         flow_dir = os.path.join(basedir, 'flow_i1')
     else:
-        flow_dir = os.path.join(basedir, 'flow_i1_with_cross_flows')
-
+        # flow_dir = os.path.join(basedir, 'flow_i1_with_cross_flows')
+        flow_dir = os.path.join(basedir, 'flow_i1')
     if fwd:
       fwd_flow_path = os.path.join(flow_dir, 
                                   '%05d_fwd.npz'%(start_frame + img_i))
@@ -688,6 +688,8 @@ def compute_sf_lke_loss(pts_ref_ndc, pts_post_ndc, pts_prev_ndc, H, W, f):
     # scene flow 
     scene_flow_w_ref2post = pts_3d_post_world - pts_3d_ref_world
     scene_flow_w_prev2ref = pts_3d_ref_world - pts_3d_prev_world
+    if(0.5 * torch.mean((scene_flow_w_ref2post - scene_flow_w_prev2ref) ** 2) > 100):
+        print('DEBUG HERE')
 
     return 0.5 * torch.mean((scene_flow_w_ref2post - scene_flow_w_prev2ref) ** 2)
 

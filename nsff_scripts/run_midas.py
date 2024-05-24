@@ -37,6 +37,73 @@ def read_image(path):
 
     return img
     
+def _minify_test(basedir, factors=[], resolutions=[]):
+
+    '''
+        Minify the images to small resolution for testing
+    '''
+
+    needtoload = False
+    for r in factors:
+        imgdir = os.path.join(basedir, 'test_images_{}'.format(r))
+        if not os.path.exists(imgdir):
+            needtoload = True
+    for r in resolutions:
+        imgdir = os.path.join(basedir, 'test_images_{}x{}'.format(r[1], r[0]))
+        if not os.path.exists(imgdir):
+            needtoload = True
+    if not needtoload:
+        return
+    
+    from shutil import copy
+    from subprocess import check_output
+    import glob
+
+    imgdir = os.path.join(basedir, 'test_images')
+    imgs = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir))]
+    imgs = [f for f in imgs if any([f.endswith(ex) for ex in ['JPG', 'jpg', 'png', 'jpeg', 'PNG']])]
+    imgdir_orig = imgdir
+    
+    wd = os.getcwd()
+
+    for r in factors + resolutions:
+        if isinstance(r, int):
+            name = 'test_images_{}'.format(r)
+            resizearg = '{}%'.format(100./r)
+        else:
+            name = 'test_images_{}x{}'.format(r[1], r[0])
+            resizearg = '{}x{}'.format(r[1], r[0])
+
+        imgdir = os.path.join(basedir, name)
+        if os.path.exists(imgdir):
+            continue
+            
+        print('Minifying', r, basedir)
+        
+        os.makedirs(imgdir)
+        check_output('cp {}/* {}'.format(imgdir_orig, imgdir), shell=True)
+        
+        ext = imgs[0].split('.')[-1]
+        print(ext)
+        # sys.exit()
+        img_path_list = glob.glob(os.path.join(imgdir, '*.%s'%ext))
+        
+        for img_path in img_path_list:
+            save_path = img_path.replace('.jpg', '.png')
+            img = cv2.imread(img_path)
+
+            print(img.shape, r)
+
+            cv2.imwrite(save_path, 
+                        cv2.resize(img, 
+                                (r[1], r[0]), 
+                                interpolation=cv2.INTER_AREA))
+
+        if ext != 'png':
+            check_output('rm {}/*.{}'.format(imgdir, ext), shell=True)
+            print('Removed duplicates')
+        print('Done')
+
 def _minify(basedir, factors=[], resolutions=[]):
     '''
         Minify the images to small resolution for training
@@ -129,7 +196,7 @@ def run(basedir,
     factor = sh[0] / float(height)
     width = int(round(sh[1] / factor))
     _minify(basedir, resolutions=[[height, width]])
-
+    _minify_test(basedir, resolutions=[[height, width]])
     # select device
     device = torch.device("cuda")
     print("device: %s" % device)

@@ -693,7 +693,9 @@ def train():
                 flow_loss += w_of * compute_mae(render_of_bwd, 
                                             target_of_bwd, 
                                             target_bwd_mask)#torch.sum(torch.abs(render_of_bwd - target_of_bwd) * target_bwd_mask)/(torch.sum(target_bwd_mask) + 1e-8)
-                
+
+        if(flow_loss > 3):
+            print('DEBUG HERE')
         # scene flow smoothness loss
         sf_sm_loss = args.w_sm * (compute_sf_sm_loss(ret['raw_pts_ref'], 
                                                     ret['raw_pts_post'], 

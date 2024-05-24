@@ -40,7 +40,7 @@ final_height = 1014
 
 use_sparse_flow_prior = True
 num_extra_sample_sparse_flow = 512
-w_sparse_flow_loss = 0.01
+w_sparse_flow_loss = 0.0001
 
 use_dense_flow_prior = True
 

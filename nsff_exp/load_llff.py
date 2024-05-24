@@ -7,6 +7,73 @@ import cv2
 ##########  see https://github.com/Fyusion/LLFF for original
 
 
+def _load_data_N3DV(basedir,  
+                    factor=None, width=None, height=None,
+                    load_imgs=True, evaluation=True):
+
+    print('factor ', factor)
+    poses_arr = np.load(os.path.join(basedir, 'test_poses_bounds.npy'))
+
+    poses = poses_arr[:, :-2].reshape([-1, 3, 5]).transpose([1,2,0])
+    bds = poses_arr[:, -2:].transpose([1,0])
+    
+    img0 = [os.path.join(basedir, 'test_images', f) for f in sorted(os.listdir(os.path.join(basedir, 'test_images'))) \
+            if f.endswith('JPG') or f.endswith('jpg') or f.endswith('png')][0]
+    sh = imageio.imread(img0).shape
+    
+    sfx = ''
+    
+    if factor is not None:
+        sfx = '_{}'.format(factor)
+        # _minify(basedir, factors=[factor])
+        factor = factor
+    elif height is not None:
+        factor = sh[0] / float(height)
+        width = int(round(sh[1] / factor))
+        # width = int((sh[1] / factor))
+        # _minify(basedir, resolutions=[[height, width]])
+        sfx = '_{}x{}'.format(width, height)
+    elif width is not None:
+        factor = sh[1] / float(width)
+        width = int(round(sh[0] / factor))
+        # _minify(basedir, resolutions=[[height, width]])
+        sfx = '_{}x{}'.format(width, height)
+    else:
+        factor = 1
+
+    imgdir = os.path.join(basedir, 'test_images' + sfx)
+    if not os.path.exists(imgdir):
+        print( imgdir, 'does not exist, returning' )
+        return
+    
+    imgfiles = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir)) \
+                if f.endswith('JPG') or f.endswith('jpg') or f.endswith('png')]
+    # imgfiles = imgfiles[start_frame:end_frame]
+
+    if poses.shape[-1] != len(imgfiles):
+        print( 'Mismatch between imgs {} and poses {} !!!!'.format(len(imgfiles), 
+                                                                poses.shape[-1]) )
+        return
+
+    sh = imageio.imread(imgfiles[0]).shape
+    poses[:2, 4, :] = np.array(sh[:2]).reshape([2, 1])
+    poses[2, 4, :] = poses[2, 4, :] * 1./factor
+    
+    if not load_imgs:
+        return poses, bds
+    
+    def imread(f):
+        if f.endswith('png'):
+            return imageio.imread(f, apply_gamma=False)
+        else:
+            return imageio.imread(f)
+        
+    imgs = imgs = [imread(f)[...,:3]/255. for f in imgfiles]
+    imgs = np.stack(imgs, -1)  
+    
+
+    return poses, bds, imgs
+
 def _load_data(basedir, start_frame, end_frame, 
                factor=None, width=None, height=None, 
                load_imgs=True, evaluation=False):
@@ -239,6 +306,75 @@ def read_MiDaS_disp(disp_fi, disp_rescale=10., h=None, w=None):
     disp = np.load(disp_fi)
     return disp
 
+
+def load_N3DV_data(basedir,
+                     factor=8, target_idx=5, 
+                     recenter=True, bd_factor=.75, 
+                     spherify=False, path_zflat=False,
+                     final_height=1014):
+    poses, bds, imgs = _load_data_N3DV(basedir, height=final_height, evaluation=True)
+    print('Loaded', basedir, bds.min(), bds.max())
+
+    # Correct rotation matrix ordering and move variable dim to axis 0
+    poses = np.concatenate([poses[:, 1:2, :], 
+                            -poses[:, 0:1, :], 
+                            poses[:, 2:, :]], 1)
+    poses = np.moveaxis(poses, -1, 0).astype(np.float32)
+    images = np.moveaxis(imgs, -1, 0).astype(np.float32)
+    bds = np.moveaxis(bds, -1, 0).astype(np.float32)
+
+    # Rescale if bd_factor is provided
+    sc = 1. if bd_factor is None else 1./(np.percentile(bds[:, 0], 5) * bd_factor)
+    # sc = 1. if bd_factor is None else 1./(bds.min() * bd_factor)
+    poses[:,:3,3] *= sc
+
+    bds *= sc
+    
+    if recenter:
+        poses = recenter_poses(poses)
+        
+    c2w = poses[target_idx, :, :]
+    # c2w = poses_avg(poses)
+
+    ## Get spiral
+    # Get average pose
+    up = normalize(poses[:, :3, 1].sum(0))
+    # up = normalize(poses[target_idx, :3, 1])
+
+    # Find a reasonable "focus disp" for this dataset
+    close_disp, inf_disp = bds.min()*.9, bds.max()*5.
+    dt = .75
+    mean_dz = 1./(((1.-dt)/close_disp + dt/inf_disp))
+    focal = mean_dz
+
+    # Get radii for spiral path
+    shrink_factor = .8
+    zdelta = close_disp * .1
+    tt = poses[:,:3,3] # ptstocam(poses[:3,3,:].T, c2w).T
+    rads = np.percentile(np.abs(tt), 90, 0)
+    c2w_path = c2w
+    N_views = 120
+    N_rots = 2
+
+    if path_zflat:
+        zloc = -close_disp * .1
+        c2w_path[:3,3] = c2w_path[:3,3] + zloc * c2w_path[:3,2]
+        rads[2] = 0.
+        N_rots = 1
+        N_views/=2
+
+    # Generate poses for spiral path
+    # render_poses = render_path_spiral(c2w_path, up, rads, focal, zdelta, zrate=.5, rots=N_rots, N=N_views)
+    render_poses = render_wander_path(c2w)
+    render_poses = np.array(render_poses).astype(np.float32)
+
+    images = images.astype(np.float32)
+    poses = poses.astype(np.float32)
+
+    return images, poses, bds, render_poses 
+
+
+    
 
 def load_nvidia_data(basedir, start_frame, end_frame, 
                      factor=8, target_idx=10, 
