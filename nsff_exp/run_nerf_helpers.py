@@ -634,7 +634,8 @@ def read_sparse_flow(basedir, img_i, start_frame):
     flow_dir = Path(basedir) / 'sparse_flow_colmap'
     flow_path = flow_dir / 'matched_pixels.csv'
     flow_df = pd.read_csv(flow_path).astype(int)
-    flow_df = flow_df[((flow_df['frame1_num'] == start_frame + img_i) & (flow_df['frame2_num'] % 10 > (start_frame + img_i) % 10)) | ((flow_df['frame2_num'] == start_frame + img_i) & (flow_df['frame2_num'] % 10 > (start_frame + img_i) % 10))]
+    # flow_df = flow_df[((flow_df['frame1_num'] == start_frame + img_i) & (flow_df['frame2_num'] % 10 > (start_frame + img_i) % 10)) | ((flow_df['frame2_num'] == start_frame + img_i) & (flow_df['frame2_num'] % 10 > (start_frame + img_i) % 10))]
+    flow_df = flow_df[(flow_df['frame1_num'] == start_frame + img_i) | (flow_df['frame2_num'] == start_frame + img_i)]
     # flow_df = flow_df[((flow_df['frame1_num'] == start_frame + img_i) ) | ((flow_df['frame2_num'] == start_frame + img_i))]
     # assert a.shape[0] == flow_df.shape[0]
     return flow_df
