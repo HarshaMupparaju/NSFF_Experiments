@@ -359,12 +359,12 @@ def train():
         hard_coords = torch.Tensor(motion_coords[img_i]).cuda()
         mask_gt = masks[img_i].cuda()
         #TODO: Dont Hard code the if conditions
-        if(args.use_dense_flow_prior):
-            if (img_i == 0 or img_i == 10 or img_i == 20):
+        if args.multiview:
+            if (img_i % 10 == 0):
                 flow_fwd, fwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior, img_i,
                                                     args.start_frame, fwd=True)
                 flow_bwd, bwd_mask = np.zeros_like(flow_fwd), np.zeros_like(fwd_mask)
-            elif (img_i == num_img - 1 or img_i == 19 or img_i == 9):
+            elif (img_i % 10 == 9):
                 flow_bwd, bwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior, img_i,
                                                     args.start_frame, fwd=False)
                 flow_fwd, fwd_mask = np.zeros_like(flow_bwd), np.zeros_like(bwd_mask)
@@ -567,20 +567,25 @@ def train():
             for k in ret:
                 ret[k] = ret[k][sparse_flow_mask == 0]
 
+        #TODO: Check if the interval needs to be a variable throughout
 
         post_num = img_i + 1
         prev_num = img_i - 1
-        
-        if args.use_dense_flow_prior:
-            if(img_i == 9 or img_i == 19 or img_i == 29):
-                post_num = img_i
 
-            if(img_i == 0 or img_i == 10 or img_i == 20):
+        if args.multiview:
+            if not args.use_dense_flow_prior:
+                post_num = int((img_i + 11) % num_img)
+                prev_num = int((img_i + 9) % num_img)
+
+            if(img_i % 10 == 0):
                 prev_num = img_i
+            elif(img_i % 10 == 9):
+                post_num = img_i
 
 
         pose_post = poses[min(post_num, int(num_img) - 1), :3,:4]
         pose_prev = poses[max(prev_num - 1, 0), :3,:4]
+
 
         render_of_fwd, render_of_bwd = compute_optical_flow(pose_post, 
                                                             pose, pose_prev, 
