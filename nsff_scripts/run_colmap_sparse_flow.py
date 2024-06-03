@@ -26,10 +26,9 @@ def estimate_sparse_flow():
         output_dirpath = data_dirpath / 'sparse_flow_colmap'
         output_dirpath.mkdir(exist_ok=True)
 
-        l1 = list(np.arange(0, 9)) + list(np.arange(0, 9)) + list(np.arange(10, 19)) + list(np.arange(10, 19)) + list(np.arange(20, 29)) + list(np.arange(20, 29))
-        l2 = list(np.arange(0, 9) + 11) + list(np.arange(0, 9) + 21) + list(np.arange(10, 19) - 9) + list(np.arange(10, 19) + 11) + list(np.arange(20, 29) - 19) + list(np.arange(20, 29) - 9)
-
-
+        l1 = list(np.arange(0, 9)) + list(np.arange(1, 10)) + list(np.arange(10, 19)) + list(np.arange(11, 20)) + list(np.arange(20, 29)) + list(np.arange(21, 30))
+        l2 = list(np.arange(0, 9) + 11) + list(np.arange(1, 10) + 9) + list(np.arange(10, 19) + 11) + list(np.arange(11, 20) + 9) + list(np.arange(20, 29) - 19) + list(np.arange(21, 30) -21)
+        
         for i, j in zip(l1, l2):
             image1_filepath = images_dipath / f'{i:05d}.png'
             image2_filepath = images_dipath / f'{j:05d}.png'

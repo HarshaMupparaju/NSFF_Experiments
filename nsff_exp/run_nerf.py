@@ -359,12 +359,12 @@ def train():
         hard_coords = torch.Tensor(motion_coords[img_i]).cuda()
         mask_gt = masks[img_i].cuda()
         #TODO: Dont Hard code the if conditions
-        if(args.use_dense_flow_prior):
-            if (img_i == 0 or img_i == 10 or img_i == 20):
+        if args.multiview:
+            if (img_i % 10 == 0):
                 flow_fwd, fwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior, img_i,
                                                     args.start_frame, fwd=True)
                 flow_bwd, bwd_mask = np.zeros_like(flow_fwd), np.zeros_like(fwd_mask)
-            elif (img_i == num_img - 1 or img_i == 19 or img_i == 9):
+            elif (img_i % 10 == 9):
                 flow_bwd, bwd_mask = read_optical_flow(args.datadir, args.use_dense_flow_prior, img_i,
                                                     args.start_frame, fwd=False)
                 flow_fwd, fwd_mask = np.zeros_like(flow_bwd), np.zeros_like(bwd_mask)
@@ -397,21 +397,28 @@ def train():
             sparse_flow = read_sparse_flow(args.datadir, img_i, args.start_frame)
             x1 = sparse_flow[sparse_flow['frame1_num'] == img_i]['x1'].values
             y1 = sparse_flow[sparse_flow['frame1_num'] == img_i]['y1'].values
-            x2 = sparse_flow[sparse_flow['frame2_num'] == img_i]['x2'].values
-            y2 = sparse_flow[sparse_flow['frame2_num'] == img_i]['y2'].values
-            x = np.concatenate([x1, x2])
-            y = np.concatenate([y1, y2])
-
+            # x2 = sparse_flow[sparse_flow['frame2_num'] == img_i]['x2'].values
+            # y2 = sparse_flow[sparse_flow['frame2_num'] == img_i]['y2'].values
+            # x = np.concatenate([x1, x2])
+            # y = np.concatenate([y1, y2])
+            x = x1
+            y = y1
             img2_num1 = sparse_flow[sparse_flow['frame1_num'] == img_i]['frame2_num'].values
-            img2_num2 = sparse_flow[sparse_flow['frame2_num'] == img_i]['frame1_num'].values
-            img2_num = np.concatenate([img2_num1, img2_num2])
-            img2_x1 = sparse_flow[sparse_flow['frame2_num'] == img_i]['x1'].values
-            img2_y1 = sparse_flow[sparse_flow['frame2_num'] == img_i]['y1'].values
+            # img2_num2 = sparse_flow[sparse_flow['frame2_num'] == img_i]['frame1_num'].values
+            # img2_num = np.concatenate([img2_num1, img2_num2])
+            img2_num = img2_num1
+            fwd_sparse_flow_mask = (img2_num == (img_i + 11) % num_img).astype(np.float32)
+            bwd_sparse_flow_mask = (img2_num == (img_i + 9) % num_img).astype(np.float32)
+            # img2_x1 = sparse_flow[sparse_flow['frame2_num'] == img_i]['x1'].values
+            # img2_y1 = sparse_flow[sparse_flow['frame2_num'] == img_i]['y1'].values
             img2_x2 = sparse_flow[sparse_flow['frame1_num'] == img_i]['x2'].values
             img2_y2 = sparse_flow[sparse_flow['frame1_num'] == img_i]['y2'].values
 
-            img2_x = np.concatenate([img2_x2, img2_x1])
-            img2_y = np.concatenate([img2_y2, img2_y1])
+            # img2_x = np.concatenate([img2_x2, img2_x1])
+            # img2_y = np.concatenate([img2_y2, img2_y1])
+
+            img2_x = img2_x2
+            img2_y = img2_y2
 
             img2_coords = np.stack([img2_num, img2_y, img2_x], -1)
             
@@ -501,7 +508,10 @@ def train():
                                                         replace=False)
                 select_coords_sparse = sparse_coords[select_inds_sparse].long()
                 img2_coords = img2_coords[select_inds_sparse]
-            
+                fwd_sparse_flow_mask = fwd_sparse_flow_mask[select_inds_sparse]
+                bwd_sparse_flow_mask = bwd_sparse_flow_mask[select_inds_sparse]
+                fwd_sparse_flow_mask = torch.Tensor(fwd_sparse_flow_mask).cuda()
+                bwd_sparse_flow_mask = torch.Tensor(bwd_sparse_flow_mask).cuda()
                 select_inds_all = np.random.choice(coords.shape[0],
                                                     size=[N_rand],
                                                     replace=False) # (N_rand,)
@@ -540,6 +550,16 @@ def train():
             target_bwd_mask = bwd_mask[select_coords[:, 0], 
                                      select_coords[:, 1]].unsqueeze(-1)#.repeat(1, 2)
 
+            if args.use_sparse_flow_prior:
+                img2_coords = np.stack([img2_coords[:, 0], img2_coords[:, 2], img2_coords[:, 1]], -1)
+                target_of_fwd_sparse = img2_coords[:, 1:]
+                target_of_fwd_sparse = torch.Tensor(target_of_fwd_sparse).cuda()
+                target_fwd_mask_sparse = fwd_sparse_flow_mask.unsqueeze(-1)
+                target_of_bwd_sparse = img2_coords[:, 1:]
+                target_bwd_mask_sparse = bwd_sparse_flow_mask.unsqueeze(-1)
+                target_of_bwd_sparse = torch.Tensor(target_of_bwd_sparse).cuda()
+
+
         # img_idx_embed = img_i/num_img * 2. - 1.0
         img_idx_embed = ((img_i) % 10) / 10. * 2. - 1.0
 
@@ -560,32 +580,55 @@ def train():
                      rays=batch_rays,
                      verbose=i < 10, retraw=True,
                      **render_kwargs_train)
+        ret_sparse = {}
         if(args.use_sparse_flow_prior):
-            pts_3d = ret['raw_pts_ref']
-            pts_3d_sparse = pts_3d[sparse_flow_mask == 1]
-            weights_sparse = ret['weights_ref_dy'][sparse_flow_mask == 1]
+            # pts_3d = ret['raw_pts_ref']
+            # pts_3d_sparse = pts_3d[sparse_flow_mask == 1]
+            # weights_sparse = ret['weights_ref_dy'][sparse_flow_mask == 1]
             for k in ret:
+                ret_sparse[k] = ret[k][sparse_flow_mask == 1]
                 ret[k] = ret[k][sparse_flow_mask == 0]
+                
 
+        #TODO: Check if the interval needs to be a variable throughout
 
         post_num = img_i + 1
         prev_num = img_i - 1
-        
-        if args.use_dense_flow_prior:
-            if(img_i == 9 or img_i == 19 or img_i == 29):
-                post_num = img_i
 
-            if(img_i == 0 or img_i == 10 or img_i == 20):
+        if args.multiview:
+            if not args.use_dense_flow_prior:
+                post_num = int((img_i + 11) % num_img)
+                prev_num = int((img_i + 9) % num_img)
+
+            if args.use_sparse_flow_prior:
+                post_num_sparse = int((img_i + 11) % num_img)
+                prev_num_sparse = int((img_i + 9) % num_img)
+
+            if(img_i % 10 == 0):
                 prev_num = img_i
+                prev_num_sparse = img_i
+            elif(img_i % 10 == 9):
+                post_num = img_i
+                post_num_sparse = img_i
 
 
         pose_post = poses[min(post_num, int(num_img) - 1), :3,:4]
         pose_prev = poses[max(prev_num - 1, 0), :3,:4]
 
+
         render_of_fwd, render_of_bwd = compute_optical_flow(pose_post, 
                                                             pose, pose_prev, 
                                                             H, W, focal, 
                                                             ret)
+        
+        if args.use_sparse_flow_prior:
+            pose_post_sparse = poses[min(post_num_sparse, int(num_img) - 1), :3,:4]
+            pose_prev_sparse = poses[max(prev_num_sparse - 1, 0), :3,:4]
+        
+            render_of_fwd_sparse, render_of_bwd_sparse = compute_optical_flow(pose_post_sparse,
+                                                                            pose, pose_prev_sparse,
+                                                                            H, W, focal,
+                                                                            ret_sparse)
 
         optimizer.zero_grad()
 
@@ -658,12 +701,12 @@ def train():
 
         print('w_depth ', w_depth, 'w_of ', w_of)
         if(args.use_dense_flow_prior):
-            if (img_i == 0 or img_i == 10 or img_i == 20):
+            if (img_i % 10 == 0):
                 print('only fwd flow')
                 flow_loss = w_of * compute_mae(render_of_fwd, 
                                             target_of_fwd, 
                                             target_fwd_mask)#torch.sum(torch.abs(render_of_fwd - target_of_fwd) * target_fwd_mask)/(torch.sum(target_fwd_mask) + 1e-8)
-            elif (img_i == num_img - 1 or img_i == 19 or img_i == 9):
+            elif (img_i % 10 == 9):
                 print('only bwd flow')
                 flow_loss = w_of * compute_mae(render_of_bwd, 
                                             target_of_bwd, 
@@ -693,9 +736,26 @@ def train():
                 flow_loss += w_of * compute_mae(render_of_bwd, 
                                             target_of_bwd, 
                                             target_bwd_mask)#torch.sum(torch.abs(render_of_bwd - target_of_bwd) * target_bwd_mask)/(torch.sum(target_bwd_mask) + 1e-8)
+        #Sparse Flow Loss
+        if args.use_sparse_flow_prior:
+            if(img_i % 10 == 0):
+                print('only fwd flow')
+                sparse_flow_loss = w_of * compute_mae(render_of_fwd_sparse,
+                                                target_of_fwd_sparse,
+                                                target_fwd_mask_sparse)
+            elif(img_i % 10 == 9):
+                print('only bwd flow')
+                sparse_flow_loss = w_of * compute_mae(render_of_bwd_sparse,
+                                                target_of_bwd_sparse,
+                                                target_bwd_mask_sparse)
+            else:
+                sparse_flow_loss = w_of * compute_mae(render_of_fwd_sparse,
+                                                target_of_fwd_sparse,
+                                                target_fwd_mask_sparse)
+                sparse_flow_loss += w_of * compute_mae(render_of_bwd_sparse,
+                                                target_of_bwd_sparse,
+                                                target_bwd_mask_sparse)
 
-        if(flow_loss > 3):
-            print('DEBUG HERE')
         # scene flow smoothness loss
         sf_sm_loss = args.w_sm * (compute_sf_sm_loss(ret['raw_pts_ref'], 
                                                     ret['raw_pts_post'], 
@@ -716,16 +776,16 @@ def train():
         entropy_loss = args.w_entropy * torch.mean(-ret['raw_blend_w'] * torch.log(ret['raw_blend_w'] + 1e-8))
 
         # sparse flow loss
-        if args.use_sparse_flow_prior:
-            poses_sparse =  poses[img2_coords[:, 0], :3, :4]
-            pts_2d_img2 = project_3d_to_2d(poses_sparse, H, W, focal, pts_3d_sparse, weights_sparse)
-            pts_2d_img2 = pts_2d_img2.int().float()
-            pts_2d_img2_gt = torch.Tensor(img2_coords[:, 1:]).cuda().float()
-
-            pts_2d_img2_gt_x_y_inverted = torch.stack([pts_2d_img2_gt[:, 1],
-                                                        pts_2d_img2_gt[:, 0]], -1)
-            sparse_flow_loss = args.w_sparse_flow_loss * compute_sparse_flow_loss(pts_2d_img2, 
-                                                                                  pts_2d_img2_gt_x_y_inverted) 
+        # if args.use_sparse_flow_prior:
+        #     poses_sparse =  poses[img2_coords[:, 0], :3, :4]
+        #     pts_2d_img2 = project_3d_to_2d(poses_sparse, H, W, focal, pts_3d_sparse, weights_sparse)
+        #     pts_2d_img2 = pts_2d_img2.int().float()
+        #     pts_2d_img2_gt = torch.Tensor(img2_coords[:, 1:]).cuda().float()
+        #
+        #     pts_2d_img2_gt_x_y_inverted = torch.stack([pts_2d_img2_gt[:, 1],
+        #                                                 pts_2d_img2_gt[:, 0]], -1)
+        #     sparse_flow_loss = args.w_sparse_flow_loss * compute_sparse_flow_loss(pts_2d_img2,
+        #                                                                           pts_2d_img2_gt_x_y_inverted)
 
 
         # # ======================================  two-frames chain loss ===============================

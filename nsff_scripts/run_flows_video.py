@@ -337,7 +337,7 @@ def run_optical_flows(args):
     img_path_train = os.path.join(glob.glob(img_dir)[0], '%05d.png'%0)
     img_train = cv2.imread(img_path_train)
 
-    interval = 1    
+    interval = 11
     of_dir = os.path.join(basedir, 'flow_i%d'%interval)
 
     if not os.path.exists(of_dir):
@@ -350,9 +350,11 @@ def run_optical_flows(args):
         images = load_image_list(images)
         for i in range(images.shape[0]-1):
             print(i)
-            image1 = images[i,None]
-            image2 = images[i + 1,None]
-
+            if(i % 10 == 9):
+                print('Skipping %d'%i)
+                continue
+            image1 = images[i, None]
+            image2 = images[(i + interval) % images.shape[0], None]
             _, flow_up_fwd = model(image1, image2, iters=20, test_mode=True)
             _, flow_up_bwd = model(image2, image1, iters=20, test_mode=True)
 
