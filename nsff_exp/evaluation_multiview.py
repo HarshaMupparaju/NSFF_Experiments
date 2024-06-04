@@ -296,7 +296,7 @@ def evaluation():
         total_lpips = 0.
         count = 0.
         t = time.time()
-
+        os.mkdir(os.path.join(basedir, expname, 'rgb'))
         # for each time step
         for img_i, img in enumerate(images):
 
@@ -322,7 +322,7 @@ def evaluation():
             temp = np.clip(rgb, 0, 1)
             temp = (temp * 255).astype(np.uint8)
             temp = cv2.cvtColor(temp, cv2.COLOR_RGB2BGR)
-            os.mkdir(os.path.join(basedir, expname, 'rgb'))
+
             cv2.imwrite(os.path.join(basedir, expname, 'rgb', '%05d.png'%img_i), temp)
 
             gt_img_path = os.path.join(args.datadir, 
