@@ -318,6 +318,12 @@ def evaluation():
 
             rgb = ret['rgb_map_ref'].cpu().numpy()#.append(ret['rgb_map_ref'].cpu().numpy())
 
+            #Save the rgb images
+            rgb = np.clip(rgb, 0, 1)
+            rgb = (rgb * 255).astype(np.uint8)
+            rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(os.path.join(basedir, expname, 'rgb', '%05d.png'%img_i), rgb)
+
             gt_img_path = os.path.join(args.datadir, 
                                     'test_images_1352x1014', 
                                     '%05d.png'%img_i,)
