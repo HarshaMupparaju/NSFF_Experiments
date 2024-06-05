@@ -1,4 +1,4 @@
-expname = coffee-martini_dense_flow_prior
+expname = coffee-martini_dense_flow_prior_04
 basedir = ./logs
 datadir = ../nerf_data/N3DV/set04/coffee_martini/dense
 
