@@ -742,19 +742,19 @@ def train():
         if args.use_sparse_flow_prior:
             if(img_i % 10 == 0):
                 print('only fwd flow')
-                sparse_flow_loss = w_of * compute_mae(render_of_fwd_sparse,
+                sparse_flow_loss = args.w_sparse_flow_loss * compute_mae(render_of_fwd_sparse,
                                                 target_of_fwd_sparse,
                                                 target_fwd_mask_sparse)
             elif(img_i % 10 == 9):
                 print('only bwd flow')
-                sparse_flow_loss = w_of * compute_mae(render_of_bwd_sparse,
+                sparse_flow_loss = args.w_sparse_flow_loss * compute_mae(render_of_bwd_sparse,
                                                 target_of_bwd_sparse,
                                                 target_bwd_mask_sparse)
             else:
-                sparse_flow_loss = w_of * compute_mae(render_of_fwd_sparse,
+                sparse_flow_loss = args.w_sparse_flow_loss * compute_mae(render_of_fwd_sparse,
                                                 target_of_fwd_sparse,
                                                 target_fwd_mask_sparse)
-                sparse_flow_loss += w_of * compute_mae(render_of_bwd_sparse,
+                sparse_flow_loss += args.w_sparse_flow_loss * compute_mae(render_of_bwd_sparse,
                                                 target_of_bwd_sparse,
                                                 target_bwd_mask_sparse)
 
