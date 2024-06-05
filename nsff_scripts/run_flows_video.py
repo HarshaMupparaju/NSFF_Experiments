@@ -337,86 +337,87 @@ def run_optical_flows(args):
     img_path_train = os.path.join(glob.glob(img_dir)[0], '%05d.png'%0)
     img_train = cv2.imread(img_path_train)
 
-    interval = 11
-    of_dir = os.path.join(basedir, 'flow_i%d'%interval)
+    intervals = [1, 11]
+    for interval in intervals:
+        of_dir = os.path.join(basedir, 'flow_i%d'%interval)
 
-    if not os.path.exists(of_dir):
-        os.makedirs(of_dir)
+        if not os.path.exists(of_dir):
+            os.makedirs(of_dir)
 
-    with torch.no_grad():
-        images = glob.glob(os.path.join(basedir, 'images/', '*.png')) + \
-                 glob.glob(os.path.join(basedir, 'images/', '*.jpg'))
+        with torch.no_grad():
+            images = glob.glob(os.path.join(basedir, 'images/', '*.png')) + \
+                    glob.glob(os.path.join(basedir, 'images/', '*.jpg'))
 
-        images = load_image_list(images)
-        for i in range(images.shape[0]-1):
-            print(i)
-            if(i % 10 == 9):
-                print('Skipping %d'%i)
-                continue
-            image1 = images[i, None]
-            image2 = images[(i + interval) % images.shape[0], None]
-            _, flow_up_fwd = model(image1, image2, iters=20, test_mode=True)
-            _, flow_up_bwd = model(image2, image1, iters=20, test_mode=True)
+            images = load_image_list(images)
+            for i in range(images.shape[0]-1):
+                print(i)
+                if(i % 10 == 9):
+                    print('Skipping %d'%i)
+                    continue
+                image1 = images[i, None]
+                image2 = images[(i + interval) % images.shape[0], None]
+                _, flow_up_fwd = model(image1, image2, iters=20, test_mode=True)
+                _, flow_up_bwd = model(image2, image1, iters=20, test_mode=True)
 
-            flow_up_fwd = flow_up_fwd[0].cpu().numpy().transpose(1, 2, 0)
-            flow_up_bwd = flow_up_bwd[0].cpu().numpy().transpose(1, 2, 0)
+                flow_up_fwd = flow_up_fwd[0].cpu().numpy().transpose(1, 2, 0)
+                flow_up_bwd = flow_up_bwd[0].cpu().numpy().transpose(1, 2, 0)
 
-            img1 = cv2.resize(np.uint8(np.clip(image1[0].cpu().numpy().transpose(1, 2, 0), 0, 255)), 
-                             (img_train.shape[1], img_train.shape[0]), 
-                              cv2.INTER_LINEAR)
-            img2 = cv2.resize(np.uint8(np.clip(image2[0].cpu().numpy().transpose(1, 2, 0), 0, 255)), 
-                             (img_train.shape[1], img_train.shape[0]), 
-                             cv2.INTER_LINEAR)
+                img1 = cv2.resize(np.uint8(np.clip(image1[0].cpu().numpy().transpose(1, 2, 0), 0, 255)), 
+                                (img_train.shape[1], img_train.shape[0]), 
+                                cv2.INTER_LINEAR)
+                img2 = cv2.resize(np.uint8(np.clip(image2[0].cpu().numpy().transpose(1, 2, 0), 0, 255)), 
+                                (img_train.shape[1], img_train.shape[0]), 
+                                cv2.INTER_LINEAR)
 
-            fwd_flow = resize_flow(flow_up_fwd, 
-                                   img_train.shape[0], 
-                                   img_train.shape[1])
-            # fwd_flow = refinement_flow(fwd_flow, img1, img2)
+                fwd_flow = resize_flow(flow_up_fwd, 
+                                    img_train.shape[0], 
+                                    img_train.shape[1])
+                # fwd_flow = refinement_flow(fwd_flow, img1, img2)
 
-            bwd_flow = resize_flow(flow_up_bwd, 
-                                   img_train.shape[0], 
-                                   img_train.shape[1])
-            # bwd_flow = refinement_flow(bwd_flow, img1, img2)
+                bwd_flow = resize_flow(flow_up_bwd, 
+                                    img_train.shape[0], 
+                                    img_train.shape[1])
+                # bwd_flow = refinement_flow(bwd_flow, img1, img2)
 
-            fwd_mask, bwd_mask = compute_fwdbwd_mask(fwd_flow, 
-                                                     bwd_flow)
+                fwd_mask, bwd_mask = compute_fwdbwd_mask(fwd_flow, 
+                                                        bwd_flow)
 
-            if VIZ:
-                if not os.path.exists('./viz_flow'):
-                    os.makedirs('./viz_flow')
+                if VIZ:
+                    if not os.path.exists('./viz_flow'):
+                        os.makedirs('./viz_flow')
 
-                if not os.path.exists('./viz_warp_imgs'):
-                    os.makedirs('./viz_warp_imgs')
+                    if not os.path.exists('./viz_warp_imgs'):
+                        os.makedirs('./viz_warp_imgs')
 
-                plt.figure(figsize=(12, 6))
-                plt.subplot(2,3,1)
-                plt.imshow(img1)
-                plt.subplot(2,3,4)
-                plt.imshow(img2)
+                    plt.figure(figsize=(12, 6))
+                    plt.subplot(2,3,1)
+                    plt.imshow(img1)
+                    plt.subplot(2,3,4)
+                    plt.imshow(img2)
 
-                plt.subplot(2,3,2)
-                plt.imshow(flow_viz.flow_to_image(fwd_flow)/255.)
-                plt.subplot(2,3,3)
-                plt.imshow(flow_viz.flow_to_image(bwd_flow)/255.)
+                    plt.subplot(2,3,2)
+                    plt.imshow(flow_viz.flow_to_image(fwd_flow)/255.)
+                    plt.subplot(2,3,3)
+                    plt.imshow(flow_viz.flow_to_image(bwd_flow)/255.)
 
-                plt.subplot(2,3,5)
-                plt.imshow(flow_viz.flow_to_image(fwd_flow)/255. * np.float32(fwd_mask[..., np.newaxis]))
+                    plt.subplot(2,3,5)
+                    plt.imshow(flow_viz.flow_to_image(fwd_flow)/255. * np.float32(fwd_mask[..., np.newaxis]))
 
-                plt.subplot(2,3,6)
-                plt.imshow(flow_viz.flow_to_image(bwd_flow)/255. * np.float32(bwd_mask[..., np.newaxis]))
+                    plt.subplot(2,3,6)
+                    plt.imshow(flow_viz.flow_to_image(bwd_flow)/255. * np.float32(bwd_mask[..., np.newaxis]))
 
-                plt.savefig('./viz_flow/%02d.jpg'%i)
-                plt.close()
+                    plt.savefig('./viz_flow/%02d.jpg'%i)
+                    plt.close()
 
-                warped_im2 = warp_flow(img2, fwd_flow)
-                warped_im0 = warp_flow(img1, bwd_flow)
-  
-                cv2.imwrite('./viz_warp_imgs/im_%05d.jpg'%(i), img1[..., ::-1])
-                cv2.imwrite('./viz_warp_imgs/im_%05d_fwd.jpg'%(i), warped_im2[..., ::-1])
-                cv2.imwrite('./viz_warp_imgs/im_%05d_bwd.jpg'%(i + 1), warped_im0[..., ::-1])
+                    warped_im2 = warp_flow(img2, fwd_flow)
+                    warped_im0 = warp_flow(img1, bwd_flow)
+    
+                    cv2.imwrite('./viz_warp_imgs/im_%05d.jpg'%(i), img1[..., ::-1])
+                    cv2.imwrite('./viz_warp_imgs/im_%05d_fwd.jpg'%(i), warped_im2[..., ::-1])
+                    cv2.imwrite('./viz_warp_imgs/im_%05d_bwd.jpg'%(i + 1), warped_im0[..., ::-1])
 
-            np.savez(os.path.join(of_dir, '%05d_fwd.npz'%i), flow=fwd_flow, mask=fwd_mask)
-            np.savez(os.path.join(of_dir, '%05d_bwd.npz'%(i + 1)), flow=bwd_flow, mask=bwd_mask)
+                np.savez(os.path.join(of_dir, '%05d_fwd.npz'%i), flow=fwd_flow, mask=fwd_mask)
+                np.savez(os.path.join(of_dir, '%05d_bwd.npz'%(i + 1)), flow=bwd_flow, mask=bwd_mask)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

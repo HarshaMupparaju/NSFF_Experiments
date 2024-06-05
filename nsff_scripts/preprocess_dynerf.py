@@ -149,7 +149,7 @@ def preprocess_dynerf(dataset_name, scene_names, set_num):
     for scene_name in scene_names:
         output_dirpath = Path(f'../nerf_data/{dataset_name}/set{set_num:02d}/{scene_name}/dense')
         output_images_dirpath = output_dirpath / 'images/'
-        # output_images_dirpath.mkdir(exist_ok=False, parents=True)
+        output_images_dirpath.mkdir(exist_ok=False, parents=True)
         output_test_images_dirpath = output_dirpath / 'test_images/'
         output_test_images_dirpath.mkdir(exist_ok=False, parents=True)
         root_dirpath = Path('../nerf_data/')
@@ -171,16 +171,16 @@ def preprocess_dynerf(dataset_name, scene_names, set_num):
 
         # Pick frames
         frames = list(range(0, 100, 10))
-        # poses_bounds_processed = []
-        # for i, train_num in enumerate(train_nums):
-        #     for j, frame in enumerate(frames):
-        #         image_filepath = scene_dirpath / f'{train_num:02d}/images/{frame:05d}.png'
-        #         output_filepath = output_dirpath / f'images/{(i * 10 + j):05d}.png'
-        #         shutil.copy(image_filepath, output_filepath)
+        poses_bounds_processed = []
+        for i, train_num in enumerate(train_nums):
+            for j, frame in enumerate(frames):
+                image_filepath = scene_dirpath / f'{train_num:02d}/images/{frame:05d}.png'
+                output_filepath = output_dirpath / f'images/{(i * 10 + j):05d}.png'
+                shutil.copy(image_filepath, output_filepath)
             
-        #     poses_bounds_required = poses_bounds[i]
-        #     poses_bounds_required_tiled = np.tile(poses_bounds_required, (10, 1))
-        #     poses_bounds_processed.append(poses_bounds_required_tiled)
+            poses_bounds_required = poses_bounds[i]
+            poses_bounds_required_tiled = np.tile(poses_bounds_required, (10, 1))
+            poses_bounds_processed.append(poses_bounds_required_tiled)
 
         test_poses_bounds_processed = []
         for i, test_num in enumerate(test_nums):
@@ -196,14 +196,16 @@ def preprocess_dynerf(dataset_name, scene_names, set_num):
 
 
         #Copy poses_bounds.npy
-        # output_poses_bounds_filepath = output_dirpath / 'poses_bounds.npy'
-        # #TODO: Don't hardcode
-        # poses_bounds_processed = np.array(poses_bounds_processed).reshape(30,17)
-        # np.save(output_poses_bounds_filepath, poses_bounds_processed)
+        output_poses_bounds_filepath = output_dirpath / 'poses_bounds.npy'
+        #TODO: Don't hardcode
+        poses_bounds_processed = np.array(poses_bounds_processed).reshape(-1,17)
+        print(poses_bounds_processed.shape)
+        np.save(output_poses_bounds_filepath, poses_bounds_processed)
 
         #Copy test_poses_bounds.npy
         output_test_poses_bounds_filepath = output_dirpath / 'test_poses_bounds.npy'
-        test_poses_bounds_processed = np.array(test_poses_bounds_processed).reshape(10,17)
+        test_poses_bounds_processed = np.array(test_poses_bounds_processed).reshape(-1,17)
+        print(test_poses_bounds_processed.shape)
         np.save(output_test_poses_bounds_filepath, test_poses_bounds_processed)
 
     return
@@ -213,8 +215,9 @@ def preprocess_dynerf(dataset_name, scene_names, set_num):
 
 def demo1():
     dataset_name = 'N3DV'
-    scene_names = ['coffee_martini', 'cook_spinach', 'cut_roasted_beef', 'flame_steak', 'sear_steak']
-    set_num = 4
+    # scene_names = ['coffee_martini', 'cook_spinach', 'cut_roasted_beef', 'flame_steak', 'sear_steak']
+    scene_names = ['coffee_martini']
+    set_num = 14
     preprocess_dynerf(dataset_name, scene_names, set_num)
     # run_colmap_wrapper(dataset_name, scene_names, set_num)
     return
