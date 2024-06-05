@@ -5,7 +5,7 @@ from glob import glob
 
 def sparse_flow_aggregator(set_num, dataset_name, scene_names):
     for scene_name in scene_names:
-        sparse_flows_dirpath = Path('../nerf_data/N3DV/set04/coffee_martini/dense/sparse_flow_colmap/')
+        sparse_flows_dirpath = Path(f'../nerf_data/N3DV/set{set_num:02}/{scene_name}/dense/sparse_flow_colmap/')
         sparse_flows_csvs_filepaths = glob(str(sparse_flows_dirpath / '*.csv'))
 
         sparse_flows = pd.DataFrame()
@@ -26,7 +26,7 @@ def sparse_flow_aggregator(set_num, dataset_name, scene_names):
 
 
 def main():
-    set_num = 4
+    set_num = 14
     dataset_name = 'N3DV'
     scene_names =['coffee_martini']
     sparse_flow_aggregator(set_num, dataset_name, scene_names)

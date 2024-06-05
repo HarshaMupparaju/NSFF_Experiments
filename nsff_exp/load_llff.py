@@ -152,25 +152,25 @@ def _load_data(basedir, start_frame, end_frame,
                     interpolation=cv2.INTER_NEAREST) for f in dispfiles]
     disp = np.stack(disp, -1)  
 
-    mask_dir = os.path.join(basedir, 'motion_masks')
-    maskfiles = [os.path.join(mask_dir, f) \
-                for f in sorted(os.listdir(mask_dir)) if f.endswith('png')]
-    maskfiles = maskfiles[start_frame:end_frame]
-
-    masks = [cv2.resize(imread(f)/255., (imgs.shape[1], imgs.shape[0]), 
-                        interpolation=cv2.INTER_NEAREST) for f in maskfiles]
-    masks = np.stack(masks, -1)  
-    masks = np.float32(masks > 1e-3)
-    
+    # mask_dir = os.path.join(basedir, 'motion_masks')
+    # maskfiles = [os.path.join(mask_dir, f) \
+    #             for f in sorted(os.listdir(mask_dir)) if f.endswith('png')]
+    # maskfiles = maskfiles[start_frame:end_frame]
+    #
+    # masks = [cv2.resize(imread(f)/255., (imgs.shape[1], imgs.shape[0]),
+    #                     interpolation=cv2.INTER_NEAREST) for f in maskfiles]
+    # masks = np.stack(masks, -1)
+    # masks = np.float32(masks > 1e-3)
+    masks = np.ones_like(imgs[...,0:1])
     # print(masks.shape)
     # sys.exit()
 
     motion_coords = []
-    for i in range(masks.shape[-1]):
-        mask = masks[:, :, i]
-        coord_y, coord_x = np.where(mask > 0.1)
-        coord = np.stack((coord_y, coord_x), -1)
-        motion_coords.append(coord)
+    # for i in range(masks.shape[-1]):
+    #     mask = masks[:, :, i]
+    #     coord_y, coord_x = np.where(mask > 0.1)
+    #     coord = np.stack((coord_y, coord_x), -1)
+    #     motion_coords.append(coord)
     
     print(imgs.shape)
     print(disp.shape)

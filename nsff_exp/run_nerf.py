@@ -356,8 +356,9 @@ def train():
         target = images[img_i].cuda()
         pose = poses[img_i, :3,:4]
         depth_gt = depths[img_i].cuda()
-        hard_coords = torch.Tensor(motion_coords[img_i]).cuda()
-        mask_gt = masks[img_i].cuda()
+        if(args.use_motion_mask):
+            hard_coords = torch.Tensor(motion_coords[img_i]).cuda()
+            mask_gt = masks[img_i].cuda()
         #TODO: Dont Hard code the if conditions
         if args.multiview:
             if (img_i % 10 == 0):
@@ -537,8 +538,9 @@ def train():
                                 select_coords[:, 1]]  # (N_rand, 3)
             target_depth = depth_gt[select_coords[:, 0], 
                                 select_coords[:, 1]]
-            target_mask = mask_gt[select_coords[:, 0], 
-                                select_coords[:, 1]].unsqueeze(-1)
+            if(args.use_motion_mask):
+                target_mask = mask_gt[select_coords[:, 0],
+                                    select_coords[:, 1]].unsqueeze(-1)
 
             target_of_fwd = flow_fwd[select_coords[:, 0], 
                                      select_coords[:, 1]]
