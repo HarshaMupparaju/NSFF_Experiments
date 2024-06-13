@@ -553,7 +553,7 @@ def train():
                                      select_coords[:, 1]].unsqueeze(-1)#.repeat(1, 2)
 
             if args.use_sparse_flow_prior:
-                img2_coords = np.stack([img2_coords[:, 0], img2_coords[:, 2], img2_coords[:, 1]], -1)
+                img2_coords = np.stack([img2_coords[:, 0], img2_coords[:, 2], img2_coords[:, 1]], -1) #Inverting (x,y) to (y,x)
                 target_of_fwd_sparse = img2_coords[:, 1:]
                 target_of_fwd_sparse = torch.Tensor(target_of_fwd_sparse).cuda()
                 target_fwd_mask_sparse = fwd_sparse_flow_mask.unsqueeze(-1)
