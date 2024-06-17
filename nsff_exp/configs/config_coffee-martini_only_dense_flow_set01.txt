@@ -32,7 +32,7 @@ w_sf_reg = 0.1
 w_cycle = 1.0
 
 start_frame = 0
-end_frame = 30
+end_frame = 160
 decay_iteration = 30
 
 final_height = 1014
