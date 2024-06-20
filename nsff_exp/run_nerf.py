@@ -257,8 +257,10 @@ def train():
         print('target_idx ', target_idx)
 
         num_img = float(poses.shape[0])
-        # img_idx_embed = target_idx/float(num_img) * 2. - 1.0
-        img_idx_embed = ((target_idx) % 10) / 10. * 2. - 1.0
+        if not args.multiview:
+            img_idx_embed = target_idx/float(num_img) * 2. - 1.0
+        else:
+            img_idx_embed = ((target_idx) % 10) / 10. * 2. - 1.0
 
         testsavedir = os.path.join(basedir, expname, 
                                 'render-spiral-frame-%03d'%\
@@ -561,9 +563,10 @@ def train():
                 target_bwd_mask_sparse = bwd_sparse_flow_mask.unsqueeze(-1)
                 target_of_bwd_sparse = torch.Tensor(target_of_bwd_sparse).cuda()
 
-
-        # img_idx_embed = img_i/num_img * 2. - 1.0
-        img_idx_embed = ((img_i) % 10) / 10. * 2. - 1.0
+        if not args.multiview:
+            img_idx_embed = img_i/num_img * 2. - 1.0
+        else:
+            img_idx_embed = ((img_i) % 10) / 10. * 2. - 1.0
 
         #####  Core optimization loop  #####
         if args.chain_sf and i > decay_iteration * 1000 * 2:

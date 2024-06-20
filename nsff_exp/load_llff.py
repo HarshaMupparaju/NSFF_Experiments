@@ -135,7 +135,7 @@ def _load_data(basedir, start_frame, end_frame, multiview,
         else:
             return imageio.imread(f)
         
-    imgs = imgs = [imread(f)[...,:3]/255. for f in imgfiles]
+    imgs = [imread(f)[...,:3]/255. for f in imgfiles]
     imgs = np.stack(imgs, -1)  
     
     if evaluation:
