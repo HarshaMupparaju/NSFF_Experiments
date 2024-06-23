@@ -211,19 +211,93 @@ def preprocess_dynerf(dataset_name, scene_names, set_num):
     return
 
 
+def preprocess_nvidia(dataset_name, scene_names, set_num):
+    for scene_name in scene_names:
+        output_dirpath = Path(f'../nerf_data/{dataset_name}/set{set_num:02d}/{scene_name}/dense')
+        output_images_dirpath = output_dirpath / 'images/'
+        output_images_dirpath.mkdir(exist_ok=False, parents=True)
+        output_test_images_dirpath = output_dirpath / 'test_images/'
+        output_test_images_dirpath.mkdir(exist_ok=False, parents=True)
+        root_dirpath = Path('../nerf_data/')
+        database_dirpath = root_dirpath / 'Nvidia/'
+        scene_dirpath = database_dirpath / scene_name
+        train_test_set_dirpath = database_dirpath / f'train_test_sets/set{set_num:02d}/'
+        train_set_csv_filepath = train_test_set_dirpath /'TrainVideosData.csv'
+        test_set_csv_filepath = train_test_set_dirpath /'TestVideosData.csv'
+        poses_bounds_filepath = scene_dirpath / 'poses_bounds.npy'
+        poses_bounds = np.load(poses_bounds_filepath)
+        train_set = pd.read_csv(train_set_csv_filepath)
+        test_set = pd.read_csv(test_set_csv_filepath)
+
+        scene_train_set = train_set[train_set['scene_name'] == scene_name]
+        train_nums = list(scene_train_set['pred_video_num'])
+        # print(train_nums)
+        # print(1/0)
+        scene_test_set = test_set[test_set['scene_name'] == scene_name]
+        test_nums = list(scene_test_set['pred_video_num'])
+
+        # Pick frames
+        frames = list(range(0, 24, 1))
+        poses_bounds_processed = []
+        for i, train_num in enumerate(train_nums):
+            for j, frame in enumerate(frames):
+                image_filepath = scene_dirpath / f'{train_num:02d}/images/{frame:05d}.jpg'
+                output_filepath = output_dirpath / f'images/{(i * 24 + j):05d}.jpg'
+                shutil.copy(image_filepath, output_filepath)
+            
+            poses_bounds_required = poses_bounds[i]
+            poses_bounds_required_tiled = np.tile(poses_bounds_required, (24, 1))
+            poses_bounds_processed.append(poses_bounds_required_tiled)
+
+        test_poses_bounds_processed = []
+        for i, test_num in enumerate(test_nums):
+            for j, frame in enumerate(frames):
+                image_filepath = scene_dirpath / f'{test_num:02d}/images/{frame:05d}.jpg'
+                output_filepath = output_dirpath / f'test_images/{(i * 24 + j):05d}.jpg'
+                shutil.copy(image_filepath, output_filepath)
+            
+            poses_bounds_required = poses_bounds[i]
+            poses_bounds_required_tiled = np.tile(poses_bounds_required, (24, 1))
+            test_poses_bounds_processed.append(poses_bounds_required_tiled)
+        
+
+
+        #Copy poses_bounds.npy
+        output_poses_bounds_filepath = output_dirpath / 'poses_bounds.npy'
+        #TODO: Don't hardcode
+        poses_bounds_processed = np.array(poses_bounds_processed).reshape(-1,17)
+        print(poses_bounds_processed.shape)
+        np.save(output_poses_bounds_filepath, poses_bounds_processed)
+
+        #Copy test_poses_bounds.npy
+        output_test_poses_bounds_filepath = output_dirpath / 'test_poses_bounds.npy'
+        test_poses_bounds_processed = np.array(test_poses_bounds_processed).reshape(-1,17)
+        print(test_poses_bounds_processed.shape)
+        np.save(output_test_poses_bounds_filepath, test_poses_bounds_processed)
+
+    return
 
 
 def demo1():
     dataset_name = 'N3DV'
     # scene_names = ['coffee_martini', 'cook_spinach', 'cut_roasted_beef', 'flame_steak', 'sear_steak']
     scene_names = ['coffee_martini']
-    set_num = 14
+    set_num = 1
     preprocess_dynerf(dataset_name, scene_names, set_num)
     # run_colmap_wrapper(dataset_name, scene_names, set_num)
     return
 
+def demo2():
+    dataset_name = 'Nvidia_processed'
+    scene_names = ['Balloon1-2']
+    set_num = 1
+    preprocess_nvidia(dataset_name, scene_names, set_num)
+    # run_colmap_wrapper(dataset_name, scene_names, set_num)
+    return
+
 def main():
-    demo1()
+    # demo1()
+    demo2()
     return
 
 if __name__ == '__main__':
