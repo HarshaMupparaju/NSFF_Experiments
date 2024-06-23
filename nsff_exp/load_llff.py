@@ -74,7 +74,7 @@ def _load_data_N3DV(basedir,
 
     return poses, bds, imgs
 
-def _load_data(basedir, start_frame, end_frame, multiview,
+def _load_data(basedir, start_frame, end_frame, multiview=False,
                factor=None, width=None, height=None, 
                load_imgs=True, evaluation=False):
     print('factor ', factor)
