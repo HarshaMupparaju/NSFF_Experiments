@@ -41,7 +41,7 @@ def run_maskrcnn(model, img_path): #, intWidth=1024, intHeight=576):
 
     print('Semantic Seg Width %d Height %d'%(intWidth, intHeight))
 
-    image = o_image.resize((intWidth, intHeight), PIL.Image.ANTIALIAS)
+    image = o_image.resize((intWidth, intHeight), PIL.Image.LANCZOS)
 
     image_tensor = torchvision.transforms.functional.to_tensor(image).cuda()
 
@@ -350,10 +350,10 @@ def run_optical_flows(args):
 
             images = load_image_list(images)
             for i in range(images.shape[0]-1):
-                print(i)
-                if(i % 10 == 9):
-                    print('Skipping %d'%i)
-                    continue
+                # print(i)
+                # if(i % 10 == 9):
+                #     print('Skipping %d'%i)
+                #     continue
                 image1 = images[i, None]
                 image2 = images[(i + interval) % images.shape[0], None]
                 _, flow_up_fwd = model(image1, image2, iters=20, test_mode=True)

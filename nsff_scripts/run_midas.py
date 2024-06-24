@@ -196,7 +196,7 @@ def run(basedir,
     factor = sh[0] / float(height)
     width = int(round(sh[1] / factor))
     _minify(basedir, resolutions=[[height, width]])
-    _minify_test(basedir, resolutions=[[height, width]])
+    # _minify_test(basedir, resolutions=[[height, width]])
     # select device
     device = torch.device("cuda")
     print("device: %s" % device)

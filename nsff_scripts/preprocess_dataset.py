@@ -231,33 +231,31 @@ def preprocess_nvidia(dataset_name, scene_names, set_num):
 
         scene_train_set = train_set[train_set['scene_name'] == scene_name]
         train_nums = list(scene_train_set['pred_video_num'])
-        # print(train_nums)
-        # print(1/0)
         scene_test_set = test_set[test_set['scene_name'] == scene_name]
         test_nums = list(scene_test_set['pred_video_num'])
 
         # Pick frames
-        frames = list(range(0, 24, 1))
+        frames = list(range(0, 10, 1))
         poses_bounds_processed = []
         for i, train_num in enumerate(train_nums):
             for j, frame in enumerate(frames):
                 image_filepath = scene_dirpath / f'{train_num:02d}/images/{frame:05d}.jpg'
-                output_filepath = output_dirpath / f'images/{(i * 24 + j):05d}.jpg'
+                output_filepath = output_dirpath / f'images/{(i * 10 + j):05d}.jpg'
                 shutil.copy(image_filepath, output_filepath)
             
             poses_bounds_required = poses_bounds[i]
-            poses_bounds_required_tiled = np.tile(poses_bounds_required, (24, 1))
+            poses_bounds_required_tiled = np.tile(poses_bounds_required, (10, 1))
             poses_bounds_processed.append(poses_bounds_required_tiled)
 
         test_poses_bounds_processed = []
         for i, test_num in enumerate(test_nums):
             for j, frame in enumerate(frames):
                 image_filepath = scene_dirpath / f'{test_num:02d}/images/{frame:05d}.jpg'
-                output_filepath = output_dirpath / f'test_images/{(i * 24 + j):05d}.jpg'
+                output_filepath = output_dirpath / f'test_images/{(i * 10 + j):05d}.jpg'
                 shutil.copy(image_filepath, output_filepath)
             
             poses_bounds_required = poses_bounds[i]
-            poses_bounds_required_tiled = np.tile(poses_bounds_required, (24, 1))
+            poses_bounds_required_tiled = np.tile(poses_bounds_required, (10, 1))
             test_poses_bounds_processed.append(poses_bounds_required_tiled)
         
 
