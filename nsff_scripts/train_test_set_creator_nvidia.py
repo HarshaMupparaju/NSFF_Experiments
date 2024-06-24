@@ -29,9 +29,12 @@ def make_train_test_set(set_num, scene_names, num_train_videos, num_test_videos)
         for camera in test_cameras:
             test_df = test_df.append({'scene_name': scene_name, 'pred_video_num': camera}, ignore_index = True)
 
+    train_test_set_path = Path(f'../nerf_data/Nvidia/train_test_sets/set{set_num:02d}')
+    train_test_set_path.mkdir(parents=True, exist_ok= True)
 
-    train_csv_output_path = Path(f'../nerf_data/Nvidia/train_test_sets/set{set_num:02d}/TrainVideosData.csv')
-    test_csv_output_path = Path(f'../nerf_data/Nvidia/train_test_sets/set{set_num:02d}/TestVideosData.csv')
+
+    train_csv_output_path = train_test_set_path / 'TrainVideosData.csv'
+    test_csv_output_path = train_test_set_path / 'TestVideosData.csv'
 
     train_df.to_csv(train_csv_output_path, index=False)
     test_df.to_csv(test_csv_output_path, index=False)
