@@ -224,7 +224,8 @@ def evaluation():
         #                                                     final_height=args.final_height)
         images, poses, bds, render_poses = load_N3DV_data(args.datadir,
                                             final_height=args.final_height)
-
+        # images, poses, bds, render_poses = load_nvidia_data(args.datadir,
+        #                                     final_height=args.final_height)
         hwf = poses[0,:3,-1]
         poses = poses[:,:3,:4]
         print('Loaded llff', images.shape, render_poses.shape, hwf, args.datadir)
@@ -326,7 +327,7 @@ def evaluation():
             cv2.imwrite(os.path.join(basedir, expname, 'rgb', '%05d.png'%img_i), temp)
 
             gt_img_path = os.path.join(args.datadir, 
-                                    'test_images_1352x1014', 
+                                    f'test_images_{W}x{H}',
                                     '%05d.png'%img_i,)
 
             # print('gt_img_path ', gt_img_path)
