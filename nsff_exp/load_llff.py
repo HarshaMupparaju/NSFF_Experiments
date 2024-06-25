@@ -74,7 +74,7 @@ def _load_data_N3DV(basedir,
 
     return poses, bds, imgs
 
-def _load_data(basedir, start_frame, end_frame, multiview=False,
+def _load_data(basedir, start_frame, end_frame, use_motion_mask=False,
                factor=None, width=None, height=None, 
                load_imgs=True, evaluation=False):
     print('factor ', factor)
@@ -152,7 +152,7 @@ def _load_data(basedir, start_frame, end_frame, multiview=False,
                     interpolation=cv2.INTER_NEAREST) for f in dispfiles]
     disp = np.stack(disp, -1)  
 
-    if not multiview:
+    if use_motion_mask:
     
         mask_dir = os.path.join(basedir, 'motion_masks')
         maskfiles = [os.path.join(mask_dir, f) \
@@ -169,7 +169,7 @@ def _load_data(basedir, start_frame, end_frame, multiview=False,
     # sys.exit()
 
     motion_coords = []
-    if not multiview:
+    if use_motion_mask:
         for i in range(masks.shape[-1]):
             mask = masks[:, :, i]
             coord_y, coord_x = np.where(mask > 0.1)
@@ -451,14 +451,14 @@ def load_nvidia_data(basedir, start_frame, end_frame,
     return images, poses, bds, render_poses 
 
 
-def load_llff_data(basedir, start_frame, end_frame, multiview, 
+def load_llff_data(basedir, start_frame, end_frame, use_motion_mask=False, 
                    factor=8, target_idx=10, 
                    recenter=True, bd_factor=.75, 
                    spherify=False, path_zflat=False, 
                    final_height=288):
     
     poses, bds, imgs, disp, masks, motion_coords = _load_data(basedir, 
-                                                              start_frame, end_frame, multiview,
+                                                              start_frame, end_frame, use_motion_mask,
                                                               height=final_height,
                                                               evaluation=False)
     
