@@ -33,4 +33,4 @@ w_cycle = 1.0
 w_prob_reg = 0.1
 
 start_frame = 0
-end_frame = 22
+end_frame = 24
