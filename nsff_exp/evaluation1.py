@@ -12,7 +12,7 @@ import math
 from render_utils import *
 from run_nerf_helpers import *
 
-from load_llff import load_nvidia_data, load_N3DV_data, load_llff_data
+from load_llff import load_nvidia_data
 import skimage.measure
 from skimage.metrics import structural_similarity
 
@@ -215,17 +215,15 @@ def evaluation():
     # Load data
     if args.dataset_type == 'llff':
         target_idx = args.target_idx
-        # images, poses, bds, render_poses = load_nvidia_data(args.datadir, 
-        #                                                     args.start_frame, args.end_frame,
-        #                                                     args.factor,
-        #                                                     target_idx=target_idx,
-        #                                                     recenter=True, bd_factor=.9,
-        #                                                     spherify=args.spherify, 
-        #                                                     final_height=args.final_height)
-        images, poses, bds, render_poses = load_N3DV_data(args.datadir,
-                                            final_height=args.final_height)
-        # images, poses, bds, render_poses = load_nvidia_data(args.datadir,
-        #                                     final_height=args.final_height)
+        images, poses, bds, render_poses = load_nvidia_data(args.datadir, 
+                                                            args.start_frame, args.end_frame,
+                                                            args.factor,
+                                                            target_idx=target_idx,
+                                                            recenter=True, bd_factor=.9,
+                                                            spherify=args.spherify, 
+                                                            final_height=args.final_height)
+
+
         hwf = poses[0,:3,-1]
         poses = poses[:,:3,:4]
         print('Loaded llff', images.shape, render_poses.shape, hwf, args.datadir)
@@ -296,227 +294,113 @@ def evaluation():
         total_ssim = 0.
         total_lpips = 0.
         count = 0.
+        # total_psnr_dy = 0.
+        # total_ssim_dy = 0.
+        # total_lpips_dy = 0.
         t = time.time()
-        os.mkdir(os.path.join(basedir, expname, 'valid_test'))
+        os.mkdir(os.path.join(basedir, expname, 'valid_test_loo'))
         # for each time step
-        for img_i, img in enumerate(images):
+        for img_i in i_train:
 
-            img_idx_embed = ((img_i) % 10) / 10. * 2. - 1.0
+            img_idx_embed = img_i/num_img * 2. - 1.0
             # for each target viewpoint
-            # for camera_i in range(0, 12):
+            for j, camera_i in enumerate(range(1, 12)):
 
-            print(time.time() - t)
-            t = time.time()
+                print(time.time() - t)
+                t = time.time()
 
+                print(img_i, camera_i)
+                if img_i % 12 == j:
+                    continue
 
+                c2w = poses[j]
+                ret = render(img_idx_embed, img_i, 0, False,
+                             num_img, 
+                             H, W, focal, 
+                             chunk=1024*16, c2w=c2w[:3,:4], 
+                             **render_kwargs_test)
 
-            c2w = poses[img_i]
-            ret = render(img_idx_embed, img_i, 0, False,
-                            num_img, 
-                            H, W, focal, 
-                            chunk=1024*16, c2w=c2w[:3,:4], 
-                            **render_kwargs_test)
+                rgb = ret['rgb_map_ref'].cpu().numpy()#.append(ret['rgb_map_ref'].cpu().numpy())
 
-            rgb = ret['rgb_map_ref'].cpu().numpy()#.append(ret['rgb_map_ref'].cpu().numpy())
+                # Save the rgb images
+                temp = np.clip(rgb, 0, 1)
+                temp = (temp * 255).astype(np.uint8)
+                temp = cv2.cvtColor(temp, cv2.COLOR_RGB2BGR)
 
-            #Save the rgb images
-            temp = np.clip(rgb, 0, 1)
-            temp = (temp * 255).astype(np.uint8)
-            temp = cv2.cvtColor(temp, cv2.COLOR_RGB2BGR)
+                cv2.imwrite(os.path.join(basedir, expname, 'valid_test_loo', '%05d.png' % img_i), temp)
 
-            cv2.imwrite(os.path.join(basedir, expname, 'valid_test', '%05d.png'%img_i), temp)
+                gt_img_path = os.path.join(args.datadir, 
+                                        'mv_images', 
+                                        '%05d'%img_i, 
+                                        'cam%02d.jpg'%(camera_i + 1))
 
-            gt_img_path = os.path.join(args.datadir, 
-                                    f'test_images_{W}x{H}',
-                                    '%05d.png'%img_i,)
+                print('gt_img_path ', gt_img_path)
+                gt_img = cv2.imread(gt_img_path)[:, :, ::-1]
+                gt_img = cv2.resize(gt_img, 
+                                    dsize=(rgb.shape[1], rgb.shape[0]), 
+                                    interpolation=cv2.INTER_AREA)
+                gt_img = np.float32(gt_img) / 255
 
-            # print('gt_img_path ', gt_img_path)
-            gt_img = cv2.imread(gt_img_path)[:, :, ::-1]
-            gt_img = cv2.resize(gt_img, 
-                                dsize=(rgb.shape[1], rgb.shape[0]), 
-                                interpolation=cv2.INTER_AREA)
-            gt_img = np.float32(gt_img) / 255
+                psnr = skimage.measure.compare_psnr(gt_img, rgb)
+                ssim = skimage.measure.compare_ssim(gt_img, rgb, 
+                                                    multichannel=True)
 
-            psnr = skimage.measure.compare_psnr(gt_img, rgb)
-            ssim = skimage.measure.compare_ssim(gt_img, rgb, 
-                                                multichannel=True)
+                gt_img_0 = im2tensor(gt_img).cuda()
+                rgb_0 = im2tensor(rgb).cuda()
 
-            gt_img_0 = im2tensor(gt_img).cuda()
-            rgb_0 = im2tensor(rgb).cuda()
+                lpips = model.forward(gt_img_0, rgb_0)
+                lpips = lpips.item()
+                print(psnr, ssim, lpips)
 
-            lpips = model.forward(gt_img_0, rgb_0)
-            lpips = lpips.item()
-            print(psnr, ssim, lpips)
+                total_psnr += psnr
+                total_ssim += ssim
+                total_lpips += lpips
+                count += 1
 
-            total_psnr += psnr
-            total_ssim += ssim
-            total_lpips += lpips
-            count += 1
+                # dynamic_mask_path = os.path.join(args.datadir, 
+                #                                 'mv_masks', 
+                #                                 '%05d'%img_i, 
+                #                                 'cam%02d.png'%(camera_i + 1))     
+                # print(dynamic_mask_path)
+                # dynamic_mask = np.float32(cv2.imread(dynamic_mask_path) > 1e-3)#/255.
+                # dynamic_mask = cv2.resize(dynamic_mask, 
+                #                         dsize=(rgb.shape[1], rgb.shape[0]), 
+                #                         interpolation=cv2.INTER_NEAREST)
 
+                # dynamic_mask_0 = torch.Tensor(dynamic_mask[:, :, :, np.newaxis].transpose((3, 2, 0, 1)))
+
+                # dynamic_ssim = calculate_ssim(gt_img, 
+                #                               rgb, 
+                #                               dynamic_mask)
+                # dynamic_psnr = calculate_psnr(gt_img, 
+                #                               rgb, 
+                #                               dynamic_mask)
+
+                # dynamic_lpips = model.forward(gt_img_0, 
+                #                               rgb_0, 
+                #                               dynamic_mask_0).item()
+
+                # total_psnr_dy += dynamic_psnr
+                # total_ssim_dy += dynamic_ssim
+                # total_lpips_dy += dynamic_lpips
 
         mean_psnr = total_psnr / count
         mean_ssim = total_ssim / count
         mean_lpips = total_lpips / count
 
-        print('mean_psnr_test ', mean_psnr)
-        print('mean_ssim_test ', mean_ssim)
-        print('mean_lpips_test ', mean_lpips)
+        print('mean_psnr ', mean_psnr)
+        print('mean_ssim ', mean_ssim)
+        print('mean_lpips ', mean_lpips)
 
+        # mean_psnr_dy = total_psnr_dy / count
+        # mean_ssim_dy = total_ssim_dy / count
+        # mean_lpips_dy= total_lpips_dy / count
 
-def evaluation_train():
-
-    parser = config_parser()
-    args = parser.parse_args()
-
-    # Load data
-    if args.dataset_type == 'llff':
-        target_idx = args.target_idx
-        images, depths, masks, poses, bds, \
-        render_poses, ref_c2w, motion_coords = load_llff_data(args.datadir,
-                                                            args.start_frame, args.end_frame, args.multiview,
-                                                            args.factor,
-                                                            target_idx=target_idx,
-                                                            recenter=True, bd_factor=.9,
-                                                            spherify=args.spherify,
-                                                            final_height=args.final_height)
-        hwf = poses[0,:3,-1]
-        poses = poses[:,:3,:4]
-        print('Loaded llff', images.shape, render_poses.shape, hwf, args.datadir)
-        # if not isinstance(i_test, list):
-        i_test = []
-        i_val = [] #i_test
-        i_train = np.array([i for i in np.arange(int(images.shape[0])) if
-                        (i not in i_test and i not in i_val)])
-
-        print('DEFINING BOUNDS')
-        if args.no_ndc:
-            near = np.percentile(bds[:, 0], 5) * 0.9 #np.ndarray.min(bds) #* .9
-            far = np.percentile(bds[:, 1], 95) * 1.1 #np.ndarray.max(bds) #* 1.
-        else:
-            near = 0.
-            far = 1.
-
-        print('NEAR FAR', near, far)
-    else:
-        print('ONLY SUPPORT LLFF!!!!!!!!')
-        sys.exit()
-
-
-    # Cast intrinsics to right types
-    H, W, focal = hwf
-    H, W = int(H), int(W)
-    hwf = [H, W, focal]
-
-    # Create log dir and copy the config file
-    basedir = args.basedir
-    args.expname = args.expname + '_F%02d-%02d'%(args.start_frame,
-                                                 args.end_frame)
-    expname = args.expname
-
-    os.makedirs(os.path.join(basedir, expname), exist_ok=True)
-    f = os.path.join(basedir, expname, 'args.txt')
-    with open(f, 'w') as file:
-        for arg in sorted(vars(args)):
-            attr = getattr(args, arg)
-            file.write('{} = {}\n'.format(arg, attr))
-    if args.config is not None:
-        f = os.path.join(basedir, expname, 'config.txt')
-        with open(f, 'w') as file:
-            file.write(open(args.config, 'r').read())
-
-    # Create nerf model
-    render_kwargs_train, render_kwargs_test, \
-        start, grad_vars, optimizer = create_nerf(args)
-
-    global_step = start
-
-    bds_dict = {
-        'near' : near,
-        'far' : far,
-    }
-
-    render_kwargs_train.update(bds_dict)
-    render_kwargs_test.update(bds_dict)
-    num_img = float(images.shape[0])
-    poses = torch.Tensor(poses).to(device)
-
-    with torch.no_grad():
-
-        model = models.PerceptualLoss(model='net-lin',net='alex',
-                                      use_gpu=True,version=0.1)
-
-        total_psnr = 0.
-        total_ssim = 0.
-        total_lpips = 0.
-        count = 0.
-        t = time.time()
-        os.mkdir(os.path.join(basedir, expname, 'valid_train'))
-        # for each time step
-        for img_i, img in enumerate(images):
-
-            img_idx_embed = ((img_i) % 10) / 10. * 2. - 1.0
-            # for each target viewpoint
-            # for camera_i in range(0, 12):
-
-            print(time.time() - t)
-            t = time.time()
-
-
-
-            c2w = poses[img_i]
-            ret = render(img_idx_embed, img_i, 0, False,
-                            num_img,
-                            H, W, focal,
-                            chunk=1024*16, c2w=c2w[:3,:4],
-                            **render_kwargs_test)
-
-            rgb = ret['rgb_map_ref'].cpu().numpy()#.append(ret['rgb_map_ref'].cpu().numpy())
-
-            #Save the rgb images
-            temp = np.clip(rgb, 0, 1)
-            temp = (temp * 255).astype(np.uint8)
-            temp = cv2.cvtColor(temp, cv2.COLOR_RGB2BGR)
-
-            cv2.imwrite(os.path.join(basedir, expname, 'valid_train', '%05d.png'%img_i), temp)
-
-            gt_img_path = os.path.join(args.datadir,
-                                    f'images_{W}x{H}',
-                                    '%05d.png'%img_i,)
-
-            # print('gt_img_path ', gt_img_path)
-            gt_img = cv2.imread(gt_img_path)[:, :, ::-1]
-            gt_img = cv2.resize(gt_img,
-                                dsize=(rgb.shape[1], rgb.shape[0]),
-                                interpolation=cv2.INTER_AREA)
-            gt_img = np.float32(gt_img) / 255
-
-            psnr = skimage.measure.compare_psnr(gt_img, rgb)
-            ssim = skimage.measure.compare_ssim(gt_img, rgb,
-                                                multichannel=True)
-
-            gt_img_0 = im2tensor(gt_img).cuda()
-            rgb_0 = im2tensor(rgb).cuda()
-
-            lpips = model.forward(gt_img_0, rgb_0)
-            lpips = lpips.item()
-            print(psnr, ssim, lpips)
-
-            total_psnr += psnr
-            total_ssim += ssim
-            total_lpips += lpips
-            count += 1
-
-
-        mean_psnr = total_psnr / count
-        mean_ssim = total_ssim / count
-        mean_lpips = total_lpips / count
-
-        print('mean_psnr_train ', mean_psnr)
-        print('mean_ssim_train ', mean_ssim)
-        print('mean_lpips_train ', mean_lpips)
+        # print('mean_psnr dy', mean_psnr_dy)
+        # print('mean_ssim dy', mean_ssim_dy)
+        # print('mean_lpips dy', mean_lpips_dy)
 
 
 if __name__=='__main__':
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     evaluation()
-    evaluation_train()

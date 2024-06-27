@@ -580,7 +580,7 @@ def train():
                      img_i, 
                      chain_bwd, 
                      chain_5frames,
-                     num_img, H, W, focal, 
+                     num_img, H, W, focal,
                      chunk=args.chunk, 
                      rays=batch_rays,
                      verbose=i < 10, retraw=True,
@@ -628,7 +628,7 @@ def train():
         
         if args.use_sparse_flow_prior:
             pose_post_sparse = poses[min(post_num_sparse, int(num_img) - 1), :3,:4]
-            pose_prev_sparse = poses[max(prev_num_sparse - 1, 0), :3,:4]
+            pose_prev_sparse = poses[max(prev_num_sparse - 1, 0), :3,:4] #TODO: Check consistency
         
             render_of_fwd_sparse, render_of_bwd_sparse = compute_optical_flow(pose_post_sparse,
                                                                             pose, pose_prev_sparse,

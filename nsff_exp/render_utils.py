@@ -1039,7 +1039,7 @@ def render_rays(img_idx,
         ret['weights_ref_dy'] = weights_ref_dy
         ret['raw_blend_w'] = raw_blend_w
 
-    img_idx_post = (((img + 1) % 10) / 10.) * 2. - 1
+    img_idx_post = (((img + 1) % 10) / 10.) * 2. - 1 # TODO:Verify this
     img_idx_rep_post = torch.ones_like(pts[:, :, 0:1]) * img_idx_post
     pts_post = torch.cat([(pts_ref[:, :, :3] + raw_sf_ref2post), img_idx_rep_post] , -1)
 
