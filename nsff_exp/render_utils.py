@@ -532,14 +532,14 @@ def run_network(inputs, viewdirs, fn, embed_fn, embeddirs_fn, netchunk=1024*16):
     return outputs
 
 
-def batchify_rays(img_idx, img, chain_bwd, chain_5frames, 
+def batchify_rays(img_idx, img, multiview, chain_bwd, chain_5frames,
                 num_img, rays_flat, chunk=1024*16, **kwargs):
     """Render rays in smaller minibatches to avoid OOM.
     """
 
     all_ret = {}
     for i in range(0, rays_flat.shape[0], chunk):
-        ret = render_rays(img_idx, img, chain_bwd, chain_5frames, 
+        ret = render_rays(img_idx, img, multiview, chain_bwd, chain_5frames,
                         num_img, rays_flat[i:i+chunk], **kwargs)
         for k in ret:
             if k not in all_ret:
@@ -551,7 +551,7 @@ def batchify_rays(img_idx, img, chain_bwd, chain_5frames,
     return all_ret
 
 
-def render(img_idx, img, chain_bwd, chain_5frames,
+def render(img_idx, img, multiview, chain_bwd, chain_5frames,
            num_img, H, W, focal,     
            chunk=1024*16, rays=None, c2w=None, ndc=True,
            near=0., far=1.,
@@ -612,7 +612,7 @@ def render(img_idx, img, chain_bwd, chain_5frames,
         rays = torch.cat([rays, viewdirs], -1)
 
     # Render and reshape
-    all_ret = batchify_rays(img_idx, img, chain_bwd, chain_5frames, 
+    all_ret = batchify_rays(img_idx, img, multiview, chain_bwd, chain_5frames,
                         num_img, rays, chunk, **kwargs)
     for k in all_ret:
         k_sh = list(sh[:-1]) + list(all_ret[k].shape[1:])
@@ -922,6 +922,7 @@ def compute_2d_prob(weights_p_mix,
 
 def render_rays(img_idx, 
                 img,
+                multiview,
                 chain_bwd,
                 chain_5frames,
                 num_img,
@@ -1038,12 +1039,16 @@ def render_rays(img_idx,
         ret['raw_pts_ref'] = pts_ref[:, :, :3]
         ret['weights_ref_dy'] = weights_ref_dy
         ret['raw_blend_w'] = raw_blend_w
-
-    img_idx_post = (((img + 1) % 10) / 10.) * 2. - 1 # TODO:Verify this
+    if(multiview):
+        img_idx_post = (((img + 1) % 10) / 10.) * 2. - 1 # TODO:Verify this
+        img_idx_prev = (((img - 1) % 10) / 10.) * 2. - 1
+    else:
+        img_idx_post = (img_idx + 1./num_img * 2. )
+        img_idx_prev = (img_idx - 1./num_img * 2. )
     img_idx_rep_post = torch.ones_like(pts[:, :, 0:1]) * img_idx_post
     pts_post = torch.cat([(pts_ref[:, :, :3] + raw_sf_ref2post), img_idx_rep_post] , -1)
 
-    img_idx_prev = (((img - 1) % 10) / 10.) * 2. - 1
+
     img_idx_rep_prev = torch.ones_like(pts[:, :, 0:1]) * img_idx_prev    
     pts_prev = torch.cat([(pts_ref[:, :, :3] + raw_sf_ref2prev), img_idx_rep_prev] , -1)
 

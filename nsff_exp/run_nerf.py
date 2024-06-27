@@ -577,7 +577,8 @@ def train():
         print('chain_5frames ', chain_5frames, ' chain_bwd ', chain_bwd)
         #Network output
         ret = render(img_idx_embed,
-                     img_i, 
+                     img_i,
+                     args.multiview,
                      chain_bwd, 
                      chain_5frames,
                      num_img, H, W, focal,
