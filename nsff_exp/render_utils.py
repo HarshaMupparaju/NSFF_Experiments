@@ -626,7 +626,7 @@ def render(img_idx, img, multiview, chain_bwd, chain_5frames,
     return all_ret
 
 
-def render_bullet_time(render_poses, target_idx, img_idx_embed, num_img,
+def render_bullet_time(render_poses, target_idx, img_idx_embed, multiview, num_img,
                     hwf, chunk, render_kwargs, gt_imgs=None, savedir=None, render_factor=0):
 
     H, W, focal = hwf
@@ -652,7 +652,7 @@ def render_bullet_time(render_poses, target_idx, img_idx_embed, num_img,
         print(i, time.time() - t)
         t = time.time()
 
-        ret = render(img_idx_embed, target_idx, 0, False,
+        ret = render(img_idx_embed, target_idx, multiview,0, False,
                      num_img, 
                      H, W, focal, 
                      chunk=1024*32, c2w=c2w[:3,:4], 

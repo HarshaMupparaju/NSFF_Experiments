@@ -267,7 +267,7 @@ def train():
                                 target_idx + '_{}_{:06d}'.format('test' if args.render_test else 'path', start))
         os.makedirs(testsavedir, exist_ok=True)
         with torch.no_grad():
-            render_bullet_time(render_poses, target_idx, img_idx_embed, num_img, hwf,
+            render_bullet_time(render_poses, target_idx, img_idx_embed, args.multiview, num_img, hwf,
                                args.chunk, render_kwargs_test, 
                                gt_imgs=images, savedir=testsavedir, 
                                render_factor=args.render_factor)
