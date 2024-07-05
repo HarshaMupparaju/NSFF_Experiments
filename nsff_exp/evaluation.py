@@ -314,7 +314,7 @@ def evaluation():
                     continue
 
                 c2w = poses[camera_i]
-                ret = render(img_idx_embed, img_i, 0, False,
+                ret = render(img_idx_embed, img_i, args.multiview, 0, False,
                              num_img, 
                              H, W, focal, 
                              chunk=1024*16, c2w=c2w[:3,:4], 
@@ -508,7 +508,7 @@ def evaluation_train():
                     continue
 
                 c2w = poses[camera_i]
-                ret = render(img_idx_embed, img_i, 0, False,
+                ret = render(img_idx_embed, img_i, args.multiview, 0, False,
                              num_img, 
                              H, W, focal, 
                              chunk=1024*16, c2w=c2w[:3,:4], 
