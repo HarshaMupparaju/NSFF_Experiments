@@ -514,12 +514,7 @@ def evaluation_train():
                              chunk=1024*16, c2w=c2w[:3,:4], 
                              **render_kwargs_test)
 
-                #Save the rgb images
-                temp = np.clip(rgb, 0, 1)
-                temp = (temp * 255).astype(np.uint8)
-                temp = cv2.cvtColor(temp, cv2.COLOR_RGB2BGR)
 
-                cv2.imwrite(os.path.join(basedir, expname, 'valid_train', '%05d.png'%img_i), temp)
 
                 rgb = ret['rgb_map_ref'].cpu().numpy()#.append(ret['rgb_map_ref'].cpu().numpy())
 
@@ -527,6 +522,13 @@ def evaluation_train():
                                         'mv_images', 
                                         '%05d'%img_i, 
                                         'cam%02d.jpg'%(camera_i + 1))
+
+                #Save the rgb images
+                temp = np.clip(rgb, 0, 1)
+                temp = (temp * 255).astype(np.uint8)
+                temp = cv2.cvtColor(temp, cv2.COLOR_RGB2BGR)
+
+                cv2.imwrite(os.path.join(basedir, expname, 'valid_train', '%05d.png'%img_i), temp)
 
                 # print('gt_img_path ', gt_img_path)
                 gt_img = cv2.imread(gt_img_path)[:, :, ::-1]
@@ -596,5 +598,5 @@ def evaluation_train():
 
 if __name__=='__main__':
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    evaluation()
+    # evaluation()
     evaluation_train()
